@@ -22,9 +22,13 @@ export class FluidsService implements OnModuleInit {
   }
 
   async run(request: AnalyzeRequest) {
-    this.kafka.emit(KafkaTopics.STATUS, {
+    const base = {
       runId: request.runId,
       cluster: this.cluster,
+    };
+
+    this.kafka.emit(KafkaTopics.STATUS, {
+      ...base,
       status: AlgorithmStatus.RUNNING,
     });
 
@@ -36,14 +40,12 @@ export class FluidsService implements OnModuleInit {
     }));
 
     this.kafka.emit(KafkaTopics.RESULT, {
-      runId: request.runId,
-      cluster: this.cluster,
+      ...base,
       results,
     });
 
     this.kafka.emit(KafkaTopics.STATUS, {
-      runId: request.runId,
-      cluster: this.cluster,
+      ...base,
       status: AlgorithmStatus.READY,
     });
   }
