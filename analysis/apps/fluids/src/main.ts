@@ -1,9 +1,11 @@
 import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
 import { FluidsModule } from "./FluidsModule";
-import { PORTS } from "@shared";
+import { CONFIG } from "@shared";
 
 async function bootstrap() {
   const app = await NestFactory.create(FluidsModule);
-  await app.listen(PORTS.fluids);
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  await app.listen(CONFIG.ports.fluids);
 }
 void bootstrap();

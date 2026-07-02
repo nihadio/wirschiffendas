@@ -3,13 +3,13 @@ import { ConfigController } from "./ConfigController";
 import { ConfigService } from "./ConfigService";
 import { Config } from "./Config";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { ENV } from "@shared";
+import { CONFIG } from "@shared";
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: "postgres",
-      ...ENV.configDb,
+      ...CONFIG.env.configDb,
       entities: [Config],
       synchronize: true,
     }),

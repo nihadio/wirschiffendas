@@ -1,8 +1,50 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
+import { ClientKafka } from "@nestjs/microservices";
+import {
+  AlgorithmStatus,
+  AnalysisResult,
+  AnalyzeRequest,
+  Cluster,
+  EQUIPMENT_BY_CLUSTER,
+  EquipmentResult,
+  KafkaTopics,
+} from "@shared";
 
 @Injectable()
-export class FluidsService {
-  getHello(): string {
-    return "Hello World!";
+export class FluidsService implements OnModuleInit {
+  private readonly cluster = Cluster.FLUIDS;
+  private readonly equipments = EQUIPMENT_BY_CLUSTER[Cluster.FLUIDS];
+
+  constructor(@Inject("KAFKA") private kafka: ClientKafka) {}
+
+  async onModuleInit() {
+    await this.kafka.connect();
+  }
+
+  async run(request: AnalyzeRequest) {
+    this.kafka.emit(KafkaTopics.STATUS, {
+      runId: request.runId,
+      cluster: this.cluster,
+      status: AlgorithmStatus.RUNNING,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20_000));
+
+    const results: EquipmentResult[] = this.equipments.map((equipment) => ({
+      equipment,
+      result: AnalysisResult.OK,
+    }));
+
+    this.kafka.emit(KafkaTopics.RESULT, {
+      runId: request.runId,
+      cluster: this.cluster,
+      results,
+    });
+
+    this.kafka.emit(KafkaTopics.STATUS, {
+      runId: request.runId,
+      cluster: this.cluster,
+      status: AlgorithmStatus.READY,
+    });
   }
 }

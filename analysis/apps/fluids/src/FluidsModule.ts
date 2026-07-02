@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
 import { FluidsController } from "./FluidsController";
 import { FluidsService } from "./FluidsService";
-import { KAFKA_CONFIG } from "@shared";
+import { CONFIG } from "@shared";
 import { ClientsModule } from "@nestjs/microservices";
 
 @Module({
-  imports: [ClientsModule.register([KAFKA_CONFIG])],
+  imports: [ClientsModule.register([CONFIG.kafkaProviderOptions])],
   controllers: [FluidsController],
   providers: [FluidsService],
 })
