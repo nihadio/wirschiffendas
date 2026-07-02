@@ -7,6 +7,7 @@ import {
   Cluster,
   EQUIPMENT_BY_CLUSTER,
   EquipmentResult,
+  KAFKA_CLIENT,
   KafkaTopics,
 } from "@shared";
 
@@ -15,7 +16,7 @@ export class FluidsService implements OnModuleInit {
   private readonly cluster = Cluster.FLUIDS;
   private readonly equipments = EQUIPMENT_BY_CLUSTER[Cluster.FLUIDS];
 
-  constructor(@Inject("KAFKA") private kafka: ClientKafka) {}
+  constructor(@Inject(KAFKA_CLIENT) private kafka: ClientKafka) {}
 
   async onModuleInit() {
     await this.kafka.connect();

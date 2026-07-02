@@ -358,6 +358,7 @@ async function bootstrap() {
 }
 bootstrap();
 ```
+> **Почему Kafka здесь, а не в модуле (как `ClientsModule` в Fluids)?** Это две разные роли. Fluids **пишет** в Kafka → регистрирует **клиент** (`ClientsModule.register`) в модуле как provider для `.emit()`. Coordinator **слушает** Kafka → запускает **слушателя** через `app.connectMicroservice` + `app.startAllMicroservices`. Запуск слушателя — операция над экземпляром `app`, а он существует только в `main.ts`; модульного аналога (`…forRoot()`, который стартует Kafka-listener) в NestJS нет. При этом сами обработчики (`@EventPattern`) лежат в `EventsController` внутри модуля — как контроллеры в Fluids; в `main.ts` вынесен только факт «запусти слушателя». Мнемоника: **пишешь → клиент → модуль; слушаешь → сервер → bootstrap.**
 
 **3.3.** `events.controller.ts` — обработчики Kafka-событий (`@EventPattern` = «обработчик события из Kafka», аналог `@Post` для HTTP):
 ```ts

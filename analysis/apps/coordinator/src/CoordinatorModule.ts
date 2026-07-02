@@ -1,10 +1,12 @@
 import { Module } from "@nestjs/common";
-import { CoordinatorController } from "./CoordinatorController";
-import { CoordinatorService } from "./CoordinatorService";
+import { HttpModule } from "@nestjs/axios";
+import { EventController } from "./EventController";
+import { AnalysisController } from "./AnalysisController";
+import { AnalysisService } from "./AnalysisService";
 
 @Module({
-  imports: [],
-  controllers: [CoordinatorController],
-  providers: [CoordinatorService],
+  imports: [HttpModule],
+  controllers: [EventController, AnalysisController],
+  providers: [AnalysisService],
 })
 export class CoordinatorModule {}

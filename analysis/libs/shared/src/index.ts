@@ -1,5 +1,6 @@
 export * from "./enums";
 export * from "./messages";
 export * from "./dtos";
-export * from "./constants";
+export * from "./config";
 export * from "./swagger";
+export * from "./constants";
