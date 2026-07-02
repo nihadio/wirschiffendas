@@ -5,8 +5,7 @@
     "outDir": "../../dist/apps/config"
   },
   "include": [
-    "src/**/*",
-    "../../libs/shared/src/**/*"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
