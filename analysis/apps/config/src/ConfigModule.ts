@@ -3,7 +3,7 @@ import { ConfigController } from "./ConfigController";
 import { ConfigService } from "./ConfigService";
 import { Config } from "./Config";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { ENV } from "wsd/shared";
+import { ENV } from "@shared";
 
 @Module({
   imports: [

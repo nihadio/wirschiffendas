@@ -51,6 +51,6 @@ export const KAFKA_CONFIG: ClientProviderOptions = {
   name: "KAFKA",
   transport: Transport.KAFKA,
   options: {
-    client: { brokers: [process.env.KAFKA_BROKER ?? "localhost:9092"] },
+    client: { brokers: [ENV.kafkaBroker] },
   },
 };

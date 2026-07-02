@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { CYLINDER_VARIANTS, type CylinderVariant } from "wsd/shared";
+import { CYLINDER_VARIANTS, type CylinderVariant } from "@shared";
 
 @Entity()
 export class Config {

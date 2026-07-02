@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString, IsObject, IsIn } from "class-validator";
-import { CYLINDER_VARIANTS, type CylinderVariant } from "wsd/shared";
+import { CYLINDER_VARIANTS, type CylinderVariant } from "@shared";
 
 export class CreateConfigDto {
   @ApiProperty({

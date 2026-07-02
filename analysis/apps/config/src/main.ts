@@ -1,7 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigModule } from "./ConfigModule";
-import { PORTS, setupSwagger } from "wsd/shared";
+import { PORTS, setupSwagger } from "@shared";
 
 async function bootstrap() {
   const app = await NestFactory.create(ConfigModule);
