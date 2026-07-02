@@ -1,3 +1,4 @@
+import { ClientProviderOptions, Transport } from "@nestjs/microservices";
 import { Cluster } from "../enums";
 
 export const TOPICS = {
@@ -45,3 +46,11 @@ export const ENV = {
     ems: process.env.EMS_URL ?? `http://localhost:${PORTS.ems}`,
   },
 } as const;
+
+export const KAFKA_CONFIG: ClientProviderOptions = {
+  name: "KAFKA",
+  transport: Transport.KAFKA,
+  options: {
+    client: { brokers: [process.env.KAFKA_BROKER ?? "localhost:9092"] },
+  },
+};
