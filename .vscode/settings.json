@@ -17,6 +17,5 @@
     "javascript",
     "typescript"
   ],
-  "files.insertFinalNewline": true,
-  "typescript.preferences.importModuleSpecifier": "non-relative"
+  "files.insertFinalNewline": true
 }

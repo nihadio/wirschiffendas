@@ -1,4 +1,4 @@
-name: wirschaffendas-analysis
+name: wirschiffendas-analysis
 
 services:
   kafka:
@@ -34,3 +34,4 @@ services:
 
 volumes:
   configdb-data:
+    name: wirschiffendas-configdb-data

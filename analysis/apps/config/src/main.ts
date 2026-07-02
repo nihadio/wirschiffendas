@@ -1,13 +1,14 @@
 import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
 import { ConfigModule } from "./ConfigModule";
-import { PORTS } from "wsd/shared/constants";
-import { ValidationPipe } from "@nestjs/common/pipes/validation.pipe";
+import { PORTS, setupSwagger } from "wsd/shared";
 
 async function bootstrap() {
   const app = await NestFactory.create(ConfigModule);
 
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  setupSwagger(app, { title: "Config", tags: ["config"] });
 
   await app.listen(PORTS.config);
 }

@@ -605,7 +605,7 @@ retry(@Param('runId') runId: string, @Param('cluster') cluster: string) {
 
 ### Шаги
 
-**6.1.** Создай React **отдельно** от Nest-монорепо: `npm create vite@latest analysis-ui -- --template react`. Положи рядом: `wirschaffendas/analysis-ui/`.
+**6.1.** Создай React **отдельно** от Nest-монорепо: `npm create vite@latest analysis-ui -- --template react`. Положи рядом: `wirschiffendas/analysis-ui/`.
 
 **6.2.** CORS — убедись, что `app.enableCors()` есть в Coordinator и Config-Service (иначе браузер заблокирует запросы с другого порта). Ты его уже добавил в фазах 1 и 3 — просто проверь.
 

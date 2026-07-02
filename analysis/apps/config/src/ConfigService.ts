@@ -29,11 +29,7 @@ export class ConfigService {
   }
 
   async updateConfig(id: string, updatedConfig: Partial<Config>) {
-    await this.exists(id);
+    await this.getConfig(id);
     return this.repository.save({ id, ...updatedConfig });
-  }
-
-  exists(id: string): Promise<boolean> {
-    return this.repository.existsBy({ id });
   }
 }
