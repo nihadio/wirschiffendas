@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/analysis-component/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/analysis-component/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/analysis-component",
+  "projects": {
+    "analysis-component": {
+      "type": "application",
+      "root": "apps/analysis-component",
+      "entryFile": "main",
+      "sourceRoot": "apps/analysis-component/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/analysis-component/tsconfig.app.json"
+      }
+    },
+    "config-service": {
+      "type": "application",
+      "root": "apps/config-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/config-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/config-service/tsconfig.app.json"
+      }
+    },
+    "coordinator": {
+      "type": "application",
+      "root": "apps/coordinator",
+      "entryFile": "main",
+      "sourceRoot": "apps/coordinator/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/coordinator/tsconfig.app.json"
+      }
+    },
+    "drivetrain-service": {
+      "type": "application",
+      "root": "apps/drivetrain-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/drivetrain-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/drivetrain-service/tsconfig.app.json"
+      }
+    },
+    "ems-service": {
+      "type": "application",
+      "root": "apps/ems-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/ems-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/ems-service/tsconfig.app.json"
+      }
+    },
+    "fluids-service": {
+      "type": "application",
+      "root": "apps/fluids-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/fluids-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/fluids-service/tsconfig.app.json"
+      }
+    },
+    "mechanical-service": {
+      "type": "application",
+      "root": "apps/mechanical-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/mechanical-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mechanical-service/tsconfig.app.json"
+      }
+    },
+    "shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    }
+  }
+}
