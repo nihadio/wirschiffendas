@@ -1,21 +1,31 @@
 import { ClientProviderOptions, Transport } from "@nestjs/microservices";
-import { Cluster } from "../enums";
+import { Cluster, Equipment } from "../enums";
 
 export const TOPICS = {
   STATUS: "analysis-status",
   RESULT: "analysis-result",
 } as const;
 
-export const EQUIPMENT_BY_CLUSTER = {
-  [Cluster.FLUIDS]: ["oilSystem", "fuelSystem", "coolingSystem"],
-  [Cluster.DRIVETRAIN]: ["powerTransmission", "gearboxOptions"],
-  [Cluster.MECHANICAL]: [
-    "startingSystem",
-    "auxiliaryPto",
-    "mountingSystem",
-    "exhaustSystem",
+export const EQUIPMENT_BY_CLUSTER: Record<Cluster, Equipment[]> = {
+  [Cluster.FLUIDS]: [
+    Equipment.OIL_SYSTEM,
+    Equipment.FUEL_SYSTEM,
+    Equipment.COOLING_SYSTEM,
   ],
-  [Cluster.EMS]: ["engineManagementSystem", "monitoringControlSystem"],
+  [Cluster.DRIVETRAIN]: [
+    Equipment.POWER_TRANSMISSION,
+    Equipment.GEARBOX_OPTIONS,
+  ],
+  [Cluster.MECHANICAL]: [
+    Equipment.STARTING_SYSTEM,
+    Equipment.AUXILIARY_PTO,
+    Equipment.MOUNTING_SYSTEM,
+    Equipment.EXHAUST_SYSTEM,
+  ],
+  [Cluster.EMS]: [
+    Equipment.ENGINE_MANAGEMENT_SYSTEM,
+    Equipment.MONITORING_CONTROL_SYSTEM,
+  ],
 } as const;
 
 export const PORTS = {
