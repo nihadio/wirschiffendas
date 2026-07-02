@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigController } from './ConfigController';
-import { ConfigService } from './ConfigService';
+import { Test, TestingModule } from "@nestjs/testing";
+import { ConfigController } from "./ConfigController";
+import { ConfigService } from "./ConfigService";
 
-describe('ConfigController', () => {
+describe("ConfigController", () => {
   let configController: ConfigController;
 
   beforeEach(async () => {
@@ -14,9 +14,9 @@ describe('ConfigController', () => {
     configController = app.get<ConfigController>(ConfigController);
   });
 
-  describe('root', () => {
+  describe("root", () => {
     it('should return "Hello World!"', () => {
-      expect(configController.getHello()).toBe('Hello World!');
+      expect(configController.getHello()).toBe("Hello World!");
     });
   });
 });

@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { MechanicalController } from './MechanicalController';
-import { MechanicalService } from './MechanicalService';
+import { Test, TestingModule } from "@nestjs/testing";
+import { MechanicalController } from "./MechanicalController";
+import { MechanicalService } from "./MechanicalService";
 
-describe('MechanicalController', () => {
+describe("MechanicalController", () => {
   let mechanicalController: MechanicalController;
 
   beforeEach(async () => {
@@ -14,9 +14,9 @@ describe('MechanicalController', () => {
     mechanicalController = app.get<MechanicalController>(MechanicalController);
   });
 
-  describe('root', () => {
+  describe("root", () => {
     it('should return "Hello World!"', () => {
-      expect(mechanicalController.getHello()).toBe('Hello World!');
+      expect(mechanicalController.getHello()).toBe("Hello World!");
     });
   });
 });

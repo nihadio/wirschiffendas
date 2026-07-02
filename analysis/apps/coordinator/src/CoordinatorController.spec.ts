@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { CoordinatorController } from './CoordinatorController';
-import { CoordinatorService } from './CoordinatorService';
+import { Test, TestingModule } from "@nestjs/testing";
+import { CoordinatorController } from "./CoordinatorController";
+import { CoordinatorService } from "./CoordinatorService";
 
-describe('CoordinatorController', () => {
+describe("CoordinatorController", () => {
   let coordinatorController: CoordinatorController;
 
   beforeEach(async () => {
@@ -11,12 +11,14 @@ describe('CoordinatorController', () => {
       providers: [CoordinatorService],
     }).compile();
 
-    coordinatorController = app.get<CoordinatorController>(CoordinatorController);
+    coordinatorController = app.get<CoordinatorController>(
+      CoordinatorController,
+    );
   });
 
-  describe('root', () => {
+  describe("root", () => {
     it('should return "Hello World!"', () => {
-      expect(coordinatorController.getHello()).toBe('Hello World!');
+      expect(coordinatorController.getHello()).toBe("Hello World!");
     });
   });
 });

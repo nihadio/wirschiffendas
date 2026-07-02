@@ -1,10 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import { CoordinatorModule } from './../src/CoordinatorModule';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import request from "supertest";
+import { App } from "supertest/types";
+import { CoordinatorModule } from "./../src/CoordinatorModule";
 
-describe('CoordinatorController (e2e)', () => {
-  let app: INestApplication;
+describe("CoordinatorController (e2e)", () => {
+  let app: INestApplication<App>;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -15,10 +16,10 @@ describe('CoordinatorController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it("/ (GET)", () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get("/")
       .expect(200)
-      .expect('Hello World!');
+      .expect("Hello World!");
   });
 });

@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { DrivetrainController } from './DrivetrainController';
-import { DrivetrainService } from './DrivetrainService';
+import { Module } from "@nestjs/common";
+import { DrivetrainController } from "./DrivetrainController";
+import { DrivetrainService } from "./DrivetrainService";
 
 @Module({
   imports: [],

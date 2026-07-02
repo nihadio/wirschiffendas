@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { CoordinatorController } from './CoordinatorController';
-import { CoordinatorService } from './CoordinatorService';
+import { Module } from "@nestjs/common";
+import { CoordinatorController } from "./CoordinatorController";
+import { CoordinatorService } from "./CoordinatorService";
 
 @Module({
   imports: [],

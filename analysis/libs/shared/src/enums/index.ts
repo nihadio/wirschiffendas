@@ -5,7 +5,7 @@ export enum Cluster {
   EMS = "ems",
 }
 
-export enum AlgorithmResult {
+export enum AlgorithmStatus {
   RUNNING = "running",
   READY = "ready",
   FAILED = "failed",

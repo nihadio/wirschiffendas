@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { CoordinatorService } from './CoordinatorService';
+import { Controller, Get } from "@nestjs/common";
+import { CoordinatorService } from "./CoordinatorService";
 
 @Controller()
 export class CoordinatorController {

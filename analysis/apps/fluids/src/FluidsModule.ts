@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { FluidsController } from './FluidsController';
-import { FluidsService } from './FluidsService';
+import { Module } from "@nestjs/common";
+import { FluidsController } from "./FluidsController";
+import { FluidsService } from "./FluidsService";
 
 @Module({
   imports: [],

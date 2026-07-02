@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { MechanicalController } from './MechanicalController';
-import { MechanicalService } from './MechanicalService';
+import { Module } from "@nestjs/common";
+import { MechanicalController } from "./MechanicalController";
+import { MechanicalService } from "./MechanicalService";
 
 @Module({
   imports: [],

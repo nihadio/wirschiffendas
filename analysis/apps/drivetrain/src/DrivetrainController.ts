@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { DrivetrainService } from './DrivetrainService';
+import { Controller, Get } from "@nestjs/common";
+import { DrivetrainService } from "./DrivetrainService";
 
 @Controller()
 export class DrivetrainController {

@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { FluidsController } from './FluidsController';
-import { FluidsService } from './FluidsService';
+import { Test, TestingModule } from "@nestjs/testing";
+import { FluidsController } from "./FluidsController";
+import { FluidsService } from "./FluidsService";
 
-describe('FluidsController', () => {
+describe("FluidsController", () => {
   let fluidsController: FluidsController;
 
   beforeEach(async () => {
@@ -14,9 +14,9 @@ describe('FluidsController', () => {
     fluidsController = app.get<FluidsController>(FluidsController);
   });
 
-  describe('root', () => {
+  describe("root", () => {
     it('should return "Hello World!"', () => {
-      expect(fluidsController.getHello()).toBe('Hello World!');
+      expect(fluidsController.getHello()).toBe("Hello World!");
     });
   });
 });

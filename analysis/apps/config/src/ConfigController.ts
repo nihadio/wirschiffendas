@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { ConfigService } from './ConfigService';
+import { Controller, Get } from "@nestjs/common";
+import { ConfigService } from "./ConfigService";
 
 @Controller()
 export class ConfigController {

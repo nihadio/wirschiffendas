@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { DrivetrainController } from './DrivetrainController';
-import { DrivetrainService } from './DrivetrainService';
+import { Test, TestingModule } from "@nestjs/testing";
+import { DrivetrainController } from "./DrivetrainController";
+import { DrivetrainService } from "./DrivetrainService";
 
-describe('DrivetrainController', () => {
+describe("DrivetrainController", () => {
   let drivetrainController: DrivetrainController;
 
   beforeEach(async () => {
@@ -14,9 +14,9 @@ describe('DrivetrainController', () => {
     drivetrainController = app.get<DrivetrainController>(DrivetrainController);
   });
 
-  describe('root', () => {
+  describe("root", () => {
     it('should return "Hello World!"', () => {
-      expect(drivetrainController.getHello()).toBe('Hello World!');
+      expect(drivetrainController.getHello()).toBe("Hello World!");
     });
   });
 });

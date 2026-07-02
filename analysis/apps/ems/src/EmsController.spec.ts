@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { EmsController } from './EmsController';
-import { EmsService } from './EmsService';
+import { Test, TestingModule } from "@nestjs/testing";
+import { EmsController } from "./EmsController";
+import { EmsService } from "./EmsService";
 
-describe('EmsController', () => {
+describe("EmsController", () => {
   let emsController: EmsController;
 
   beforeEach(async () => {
@@ -14,9 +14,9 @@ describe('EmsController', () => {
     emsController = app.get<EmsController>(EmsController);
   });
 
-  describe('root', () => {
+  describe("root", () => {
     it('should return "Hello World!"', () => {
-      expect(emsController.getHello()).toBe('Hello World!');
+      expect(emsController.getHello()).toBe("Hello World!");
     });
   });
 });
