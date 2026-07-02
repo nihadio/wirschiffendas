@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-import { CYLINDER_VARIANTS, CylinderVariant } from "wsd/shared";
+import { CYLINDER_VARIANTS, type CylinderVariant } from "wsd/shared";
 
 @Entity()
 export class Config {
@@ -8,7 +8,8 @@ export class Config {
     example: "4d53075a-6e60-4c1d-8b25-6b680d22d21c",
     format: "uuid",
   })
-  @PrimaryGeneratedColumn("uuid") id!: string;
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
 
   @ApiProperty({ example: "Diesel Engine 2000 M96" })
   @Column()
@@ -30,5 +31,6 @@ export class Config {
       fuelSystem: { leakageMonitoring: true },
     },
   })
-  @Column({ type: "jsonb" }) equipment!: Record<string, any>;
+  @Column({ type: "jsonb" })
+  equipment!: Record<string, any>;
 }

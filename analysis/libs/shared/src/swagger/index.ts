@@ -1,5 +1,10 @@
 import { INestApplication } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import swaggerUiDist from "swagger-ui-dist";
+
+const swaggerUiAssets = swaggerUiDist as {
+  getAbsoluteFSPath: () => string;
+};
 
 export interface SwaggerSetupOptions {
   title: string;
@@ -11,27 +16,29 @@ export interface SwaggerSetupOptions {
 
 export function setupSwagger(
   app: INestApplication,
-  optionsOrTitle: SwaggerSetupOptions | string,
+  options: SwaggerSetupOptions,
 ): void {
-  const options =
-    typeof optionsOrTitle === "string"
-      ? { title: optionsOrTitle }
-      : optionsOrTitle;
+  const {
+    title,
+    description,
+    version = "1.0.0",
+    path = "docs",
+    tags = [],
+  } = options;
 
   const builder = new DocumentBuilder()
-    .setTitle(options.title)
-    .setDescription(
-      options.description ?? `WirSchiffenDas Analysis - ${options.title}`,
-    )
-    .setVersion(options.version ?? "1.0");
+    .setTitle(title)
+    .setDescription(description ?? `WirSchiffenDas Analysis - ${title} API`)
+    .setVersion(version);
 
-  for (const tag of options.tags ?? []) {
+  for (const tag of tags) {
     builder.addTag(tag);
   }
 
   const config = builder.build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(options.path ?? "docs", app, document, {
-    customSiteTitle: `${options.title} docs`,
+  SwaggerModule.setup(path, app, document, {
+    customSiteTitle: `${title} docs`,
+    customSwaggerUiPath: swaggerUiAssets.getAbsoluteFSPath(),
   });
 }

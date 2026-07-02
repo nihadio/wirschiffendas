@@ -8,7 +8,9 @@ async function bootstrap() {
 
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-  setupSwagger(app, { title: "Config", tags: ["config"] });
+  setupSwagger(app, {
+    title: "Config",
+  });
 
   await app.listen(PORTS.config);
 }
