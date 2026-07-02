@@ -1,4 +1,4 @@
-import { Cluster } from "@shared/enums";
+import { Cluster } from "@shared";
 import { EquipmentResult } from "./EquipmentResult";
 
 export interface ResultMessage {

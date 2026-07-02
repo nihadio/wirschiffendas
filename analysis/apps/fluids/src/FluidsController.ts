@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { FluidsService } from "./FluidsService";
-import { AnalyzeRequest } from "@shared/dtos/AnalyzeRequest";
+import { AnalyzeRequest } from "@shared";
 
 @Controller()
 export class FluidsController {

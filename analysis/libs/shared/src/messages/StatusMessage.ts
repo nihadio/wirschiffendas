@@ -1,4 +1,4 @@
-import { AlgorithmStatus, Cluster } from "@shared/enums";
+import { AlgorithmStatus, Cluster } from "@shared";
 
 export interface StatusMessage {
   runId: string;
