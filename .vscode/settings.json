@@ -8,7 +8,14 @@
   "[javascript]": {
     "editor.formatOnSave": false
   },
-  "eslint.workingDirectories": [{ "mode": "auto" }],
-  "eslint.validate": ["javascript", "typescript"],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
+  "eslint.validate": [
+    "javascript",
+    "typescript"
+  ],
   "files.insertFinalNewline": true
 }
