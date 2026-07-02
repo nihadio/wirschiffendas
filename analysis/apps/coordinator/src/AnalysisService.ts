@@ -1,6 +1,6 @@
 import { ReplaySubject } from "rxjs";
 import { EquipmentResult, ResultMessage, StatusMessage } from "@shared";
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 
 @Injectable()
 export class AnalysisService {
@@ -14,7 +14,13 @@ export class AnalysisService {
   }
 
   stream(runId: string) {
-    return this.runs.get(runId)!.subject.asObservable();
+    const run = this.runs.get(runId);
+
+    if (!run) {
+      throw new NotFoundException(`Run ${runId} not found`);
+    }
+
+    return run.subject.asObservable();
   }
 
   applyStatusMessage(message: StatusMessage) {
