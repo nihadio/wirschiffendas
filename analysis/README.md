@@ -454,15 +454,32 @@ curl -N localhost:3000/analysis/<runId>/stream
 
 **4.1.** Создай Drivetrain (3003) и Mechanical (3004) по образцу Fluids — тот же скелет (Kafka-клиент, контроллер с 202, service с 20с+emit). Отличия: своё `cluster`-имя, свой `myEquipment` (см. таблицу в `UB5_ImplementationPlan.md` §11), свой порт. Обоим тоже поставь `@nestjs/axios` (понадобится звать EMS).
 
-**4.2.** Добавь хореографию в **Fluids** — в конце `run()`, после emit `READY`:
+**4.2.** Добавь хореографию в **Fluids**. **Что это делает:** до сих пор Drivetrain/Mechanical/EMS никто не запускал — они просто ждут. Здесь Fluids, закончив свою работу, **сам звонит следующим двум сервисам и запускает их**. Без этого отработает только Fluids, остальные не стартуют.
+
+**Куда вставлять:** замени заглушку `// ФАЗА 4: здесь Fluids позовёт Drivetrain и Mechanical`, которую ты оставил в `run()` в фазе 2 (в самом конце, после emit `READY`). Полный `run()` теперь:
 ```ts
-// FluidsService теперь тоже с HttpService в конструкторе
-const drivetrain = process.env.DRIVETRAIN_URL ?? 'http://localhost:3003';
-const mechanical = process.env.MECHANICAL_URL ?? 'http://localhost:3004';
-// параллельно, fire-and-forget — вот это и есть «сервисы зовут друг друга» = хореография
-void firstValueFrom(this.http.post(`${drivetrain}/analyze`, { runId: req.runId, config: req.config }));
-void firstValueFrom(this.http.post(`${mechanical}/analyze`, { runId: req.runId, config: req.config }));
+async run(request: AnalyzeRequest) {
+  const base = { runId: request.runId, cluster: this.cluster };
+  this.kafka.emit(TOPICS.STATUS, { ...base, status: AlgorithmStatus.RUNNING });
+
+  await new Promise((r) => setTimeout(r, 20_000)); // своя работа 20с
+
+  const results: EquipmentResult[] = this.equipments.map((equipment) => ({
+    equipment, result: AnalysisResult.OK,
+  }));
+  this.kafka.emit(TOPICS.RESULT, { ...base, results });
+  this.kafka.emit(TOPICS.STATUS, { ...base, status: AlgorithmStatus.READY });
+
+  // ↓ хореография: Fluids запускает следующих (вместо заглушки из фазы 2)
+  const drivetrain = process.env.DRIVETRAIN_URL ?? 'http://localhost:3003';
+  const mechanical = process.env.MECHANICAL_URL ?? 'http://localhost:3004';
+  const next = { runId: request.runId, config: request.config }; // ТОТ ЖЕ runId!
+  void firstValueFrom(this.http.post(`${drivetrain}/analyze`, next)); // fire-and-forget
+  void firstValueFrom(this.http.post(`${mechanical}/analyze`, next)); // два подряд = параллельно
+}
 ```
+Ключевое: передаём **тот же `runId`** — чтобы все события шли под одним прогоном и Coordinator собрал их вместе. `void firstValueFrom(...)` = «отправь POST и не жди 20с». Это и есть хореография: Fluids **сам** решает позвать следующих, без центрального дирижёра.
+> Предусловие: в `FluidsModule` импортируй `HttpModule` (`@nestjs/axios`), в конструктор `FluidsService` добавь `private http: HttpService`. До фазы 4 это было не нужно — Fluids никого не звал.
 
 **4.3.** В **Drivetrain и Mechanical** — в конце `run()`, после `READY`, каждый зовёт EMS, передавая **свои** результаты как `upstreamResults`:
 ```ts
@@ -606,7 +623,7 @@ retry(@Param('runId') runId: string, @Param('cluster') cluster: string) {
 
 ### Шаги
 
-**6.1.** Создай React **отдельно** от Nest-монорепо: `npm create vite@latest analysis-ui -- --template react`. Положи рядом: `wirschiffendas/analysis-ui/`.
+**6.1.** Создай React **отдельно** от Nest-монорепо: `npm create vite@latest analysis-ui -- --template react`. Положи рядом: `wirschaffendas/analysis-ui/`.
 
 **6.2.** CORS — убедись, что `app.enableCors()` есть в Coordinator и Config-Service (иначе браузер заблокирует запросы с другого порта). Ты его уже добавил в фазах 1 и 3 — просто проверь.
 
