@@ -1,8 +1,19 @@
 import { NestFactory } from "@nestjs/core";
 import { EmsModule } from "./EmsModule";
+import {
+  CONFIG,
+  setupGlobalExceptionFilter,
+  setupGlobalValidationPipe,
+  setupSwagger,
+} from "@shared";
 
 async function bootstrap() {
   const app = await NestFactory.create(EmsModule);
-  await app.listen(process.env.port ?? 3000);
+
+  setupGlobalValidationPipe(app);
+  setupGlobalExceptionFilter(app);
+  setupSwagger(app, { title: "EMS" });
+
+  await app.listen(CONFIG.ports.ems);
 }
 void bootstrap();

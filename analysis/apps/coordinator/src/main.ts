@@ -1,18 +1,22 @@
 import { NestFactory } from "@nestjs/core";
-import { ValidationPipe } from "@nestjs/common";
 import { MicroserviceOptions } from "@nestjs/microservices";
-import { CONFIG, createKafkaOptions, setupSwagger } from "@shared";
+import {
+  CONFIG,
+  createKafkaOptions,
+  setupGlobalExceptionFilter,
+  setupGlobalValidationPipe,
+  setupSwagger,
+} from "@shared";
 import { CoordinatorModule } from "./CoordinatorModule";
 
 async function bootstrap() {
   const app = await NestFactory.create(CoordinatorModule);
 
   app.enableCors();
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
-  setupSwagger(app, {
-    title: "Coordinator",
-  });
+  setupGlobalValidationPipe(app);
+  setupGlobalExceptionFilter(app);
+  setupSwagger(app, { title: "Coordinator" });
 
   app.connectMicroservice<MicroserviceOptions>(
     createKafkaOptions("coordinator"),

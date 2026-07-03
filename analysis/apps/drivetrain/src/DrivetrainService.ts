@@ -1,22 +1,28 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
 import { ClientKafka } from "@nestjs/microservices";
 import {
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
   Cluster,
+  CONFIG,
   EQUIPMENT_BY_CLUSTER,
   EquipmentResult,
   KAFKA_CLIENT,
   KafkaTopics,
 } from "@shared";
+import { firstValueFrom } from "rxjs";
 
 @Injectable()
 export class DrivetrainService implements OnModuleInit {
   private readonly cluster = Cluster.DRIVETRAIN;
   private readonly equipments = EQUIPMENT_BY_CLUSTER[Cluster.DRIVETRAIN];
 
-  constructor(@Inject(KAFKA_CLIENT) private kafka: ClientKafka) {}
+  constructor(
+    @Inject(KAFKA_CLIENT) private kafka: ClientKafka,
+    @Inject(HttpService) private httpService: HttpService,
+  ) {}
 
   async onModuleInit() {
     await this.kafka.connect();
@@ -49,5 +55,14 @@ export class DrivetrainService implements OnModuleInit {
       ...base,
       status: AlgorithmStatus.READY,
     });
+
+    void firstValueFrom(
+      this.httpService.post(`${CONFIG.env.urls.ems}/analyze`, {
+        runId: request.runId,
+        config: request.config,
+        upstreamCluster: this.cluster,
+        upstreamResults: results,
+      }),
+    );
   }
 }

@@ -2,11 +2,13 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   ValidateNested,
 } from "class-validator";
+import { Cluster } from "../enums";
 import { EquipmentResult } from "../messages";
 import { OptionalEquipmentConfig } from "./OptionalEquipmentConfig";
 
@@ -26,6 +28,14 @@ export class AnalyzeRequest {
   @ValidateNested()
   @Type(() => OptionalEquipmentConfig)
   config!: OptionalEquipmentConfig;
+
+  @ApiPropertyOptional({
+    enum: Cluster,
+    description: "Cluster that produced upstreamResults; only sent to EMS.",
+  })
+  @IsOptional()
+  @IsEnum(Cluster)
+  upstreamCluster?: Cluster;
 
   @ApiPropertyOptional({
     type: [EquipmentResult],
