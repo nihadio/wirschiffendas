@@ -2,12 +2,16 @@ import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
 import { MechanicalController } from "./MechanicalController";
 import { MechanicalService } from "./MechanicalService";
-import { createKafkaClientProvider } from "@shared";
+import {
+  createKafkaClientProvider,
+  SimulationController,
+  SimulationStateService,
+} from "@shared";
 import { ClientsModule } from "@nestjs/microservices";
 
 @Module({
   imports: [ClientsModule.register([createKafkaClientProvider()]), HttpModule],
-  controllers: [MechanicalController],
-  providers: [MechanicalService],
+  controllers: [MechanicalController, SimulationController],
+  providers: [MechanicalService, SimulationStateService],
 })
 export class MechanicalModule {}
