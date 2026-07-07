@@ -1,15 +1,15 @@
 import { Module } from "@nestjs/common";
-import { ConfigController } from "./ConfigController";
-import { ConfigService } from "./ConfigService";
-import { Config } from "./Config";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { CONFIG } from "@shared";
+import { ConfigController } from "./controller/ConfigController";
+import { Config } from "./entity/Config";
+import { ENV } from "./environment";
+import { ConfigService } from "./service/ConfigService";
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: "postgres",
-      ...CONFIG.env.configDb,
+      ...ENV.database,
       entities: [Config],
       synchronize: true,
     }),

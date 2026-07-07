@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -46,4 +47,13 @@ export class AnalyzeRequest {
   @ValidateNested({ each: true })
   @Type(() => EquipmentResult)
   upstreamResults?: EquipmentResult[];
+
+  @ApiPropertyOptional({
+    description:
+      "Set by the caller when the upstream service was unreachable and " +
+      "produced no results; only sent to EMS.",
+  })
+  @IsOptional()
+  @IsBoolean()
+  upstreamFailed?: boolean;
 }

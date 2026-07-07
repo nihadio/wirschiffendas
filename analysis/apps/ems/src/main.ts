@@ -1,7 +1,7 @@
+import { ENV } from "./environment";
 import { NestFactory } from "@nestjs/core";
 import { EmsModule } from "./EmsModule";
 import {
-  CONFIG,
   setupGlobalExceptionFilter,
   setupGlobalValidationPipe,
   setupSwagger,
@@ -14,6 +14,6 @@ async function bootstrap() {
   setupGlobalExceptionFilter(app);
   setupSwagger(app, { title: "EMS" });
 
-  await app.listen(CONFIG.ports.ems);
+  await app.listen(ENV.port);
 }
 void bootstrap();

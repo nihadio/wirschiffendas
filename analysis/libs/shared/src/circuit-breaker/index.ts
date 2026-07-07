@@ -1,2 +1,1 @@
-export * from "./CircuitBreakerFactory";
-export * from "./buildFailedResults";
+export * from "./CircuitBreaker";

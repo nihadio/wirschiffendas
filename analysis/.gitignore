@@ -54,6 +54,3 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-# per-app dev defaults for the PoC (no real secrets)
-!apps/*/.env

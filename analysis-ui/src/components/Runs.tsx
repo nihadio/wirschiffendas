@@ -242,7 +242,7 @@ export function Runs({ runs, busyAction, onRetry }: RunsProps) {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {new Date(run.startedAt).toLocaleTimeString()}
+                        {new Date(run.startedAt).toLocaleTimeString(undefined, { hour12: false })}
                       </Typography>
                     </TableCell>
                     {clusters.map((cluster) => (

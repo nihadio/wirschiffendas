@@ -1,7 +1,7 @@
+import { ENV } from "./environment";
 import { NestFactory } from "@nestjs/core";
 import { MicroserviceOptions } from "@nestjs/microservices";
 import {
-  CONFIG,
   createKafkaOptions,
   setupGlobalExceptionFilter,
   setupGlobalValidationPipe,
@@ -24,6 +24,6 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
 
-  await app.listen(CONFIG.ports.coordinator);
+  await app.listen(ENV.port);
 }
 void bootstrap();
