@@ -41,8 +41,6 @@ export class AnalysisService {
       run.clusters = {};
     } else {
       delete run.clusters[cluster];
-      // EMS depends on drivetrain/mechanical; stale EMS results would
-      // trigger a premature overall as soon as the retried cluster reports
       delete run.clusters[Cluster.EMS];
     }
 

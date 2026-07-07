@@ -34,7 +34,6 @@ export class ClusterGateway {
     private httpService: HttpService,
     private analysisService: AnalysisService,
   ) {
-    // no fallback: without a config there is no run to degrade
     this.configBreaker = createCircuitBreaker(
       "coordinator->config",
       (configId: string) =>
@@ -45,15 +44,12 @@ export class ClusterGateway {
         ).then((response) => response.data),
       undefined,
       {
-        // a 4xx answer means the service is healthy and rejected the input;
-        // it still fails this call but must not open the circuit
         errorFilter: (error) =>
           isAxiosError(error) && (error.response?.status ?? 500) < 500,
       },
     );
 
     this.analyzeBreakers = {
-      // if fluids is dead nothing downstream ever starts, so fail the whole run
       [Cluster.FLUIDS]: this.createAnalyzeBreaker(Cluster.FLUIDS, (request) =>
         Object.values(Cluster).forEach((cluster) =>
           this.applyFailure(request.runId, cluster),
@@ -77,7 +73,6 @@ export class ClusterGateway {
     try {
       return await this.configBreaker.fire(configId);
     } catch (error) {
-      // config service answered — the config just does not exist
       if (isAxiosError(error) && error.response?.status === 404) {
         throw new NotFoundException(`Config ${configId} not found`);
       }
@@ -96,19 +91,14 @@ export class ClusterGateway {
     }
 
     const retriedCluster = cluster as Cluster;
-    const config = this.analysisService.getConfig(runId); // 404 if run unknown
+    const config = this.analysisService.getConfig(runId);
 
     this.analysisService.resetForRetry(runId, retriedCluster);
 
-    // a manual retry is the user asserting the service is back: force the
-    // circuit closed so the call really goes to the network instead of
-    // short-circuiting to the fallback while the open-window lasts
     this.analyzeBreakers[retriedCluster].close();
     this.analyzeBreakers[Cluster.EMS].close();
 
     if (retriedCluster === Cluster.FLUIDS) {
-      // clear EMS upstream cache, otherwise the first re-run upstream
-      // completes the set against stale data from the previous run
       await this.resetEms(runId);
 
       void this.analyzeBreakers[Cluster.FLUIDS].fire({
@@ -119,9 +109,6 @@ export class ClusterGateway {
     } else if (retriedCluster === Cluster.EMS) {
       this.retryEms(runId, config);
     } else {
-      // ems starts only once BOTH upstreams have called it; the sibling
-      // is not re-run here, so reset ems and replay the sibling's stored
-      // results on its behalf — the retried service delivers the other half
       await this.resetEms(runId);
 
       const sibling =
@@ -161,7 +148,6 @@ export class ClusterGateway {
 
           return [cluster, data.down] as const;
         } catch {
-          // unreachable is indistinguishable from down for the caller
           return [cluster, true] as const;
         }
       }),
@@ -188,7 +174,6 @@ export class ClusterGateway {
     };
   }
 
-  // EMS collects one call per upstream; replay both from stored results
   private retryEms(runId: string, config: OptionalEquipmentConfig) {
     for (const upstream of [Cluster.DRIVETRAIN, Cluster.MECHANICAL]) {
       void this.analyzeBreakers[Cluster.EMS].fire({
@@ -219,7 +204,6 @@ export class ClusterGateway {
   private failUpstreamCluster(request: AnalyzeRequest, cluster: Cluster) {
     this.applyFailure(request.runId, cluster);
 
-    // complete the choreography towards EMS on behalf of the dead service
     void this.analyzeBreakers[Cluster.EMS].fire({
       runId: request.runId,
       config: request.config,
@@ -228,7 +212,6 @@ export class ClusterGateway {
     });
   }
 
-  // coordinator has no kafka producer; write failures straight into run state
   private applyFailure(runId: string, cluster: Cluster) {
     this.analysisService.applyStatusMessage({
       runId,
@@ -248,8 +231,6 @@ export class ClusterGateway {
       await firstValueFrom(
         this.httpService.delete(`${CONFIG.env.urls.ems}/analyze/${runId}`),
       );
-    } catch {
-      // best effort: EMS may be down; its cache is then empty anyway
-    }
+    } catch {}
   }
 }
