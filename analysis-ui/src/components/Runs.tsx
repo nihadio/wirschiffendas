@@ -1,6 +1,5 @@
 import {
   Box,
-  Button,
   ClickAwayListener,
   Chip,
   CircularProgress,
@@ -14,6 +13,7 @@ import {
   TableHead,
   TableRow,
   Typography,
+  IconButton,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { useState } from "react";
@@ -81,14 +81,12 @@ function ClusterCell({
     return (
       <Stack direction="row" spacing={1} alignItems="center">
         <Chip size="small" color="error" label="Failed" />
-        <Button
+        <IconButton
           size="small"
-          variant="outlined"
-          startIcon={<RefreshIcon />}
           onClick={() => onRetry(run.runId, cluster)}
         >
-          Retry
-        </Button>
+          <RefreshIcon />
+        </IconButton>
       </Stack>
     );
   }
@@ -218,17 +216,13 @@ export function Runs({ runs, busyAction, onRetry }: RunsProps) {
                 runs.map((run) => (
                   <TableRow hover key={run.runId}>
                     <TableCell>
-                      <Typography variant="body2">
-                        <Chip size="small" label={shortId(run.runId)} />
-                      </Typography>
+                      <Chip size="small" label={shortId(run.runId)} />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2">
-                        <Chip size="small" label={shortId(run.configId)} />
-                      </Typography>
+                      <Chip size="small" label={shortId(run.configId)} />
                     </TableCell>
                     <TableCell>
-                      <Stack spacing={0.5}>
+                      <Stack spacing={0.5} whiteSpace="nowrap">
                         <Typography variant="body2">
                           {run.config.engineModel}
                         </Typography>
