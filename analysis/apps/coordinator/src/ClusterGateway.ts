@@ -231,6 +231,8 @@ export class ClusterGateway {
       await firstValueFrom(
         this.httpService.delete(`${CONFIG.env.urls.ems}/analyze/${runId}`),
       );
-    } catch {}
+    } catch {
+      // ignore errors, EMS may not have received any upstream results yet
+    }
   }
 }
