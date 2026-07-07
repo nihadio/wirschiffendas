@@ -216,11 +216,13 @@ export function Runs({ runs, busyAction, onRetry }: RunsProps) {
                 runs.map((run) => (
                   <TableRow hover key={run.runId}>
                     <TableCell>
-                      <Typography variant="body2">{shortId(run.runId)}</Typography>
+                      <Typography variant="body2">
+                        <Chip size="small" label={shortId(run.runId)} />
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {shortId(run.configId)}
+                        <Chip size="small" label={shortId(run.configId)} />
                       </Typography>
                     </TableCell>
                     <TableCell>

@@ -61,7 +61,7 @@ export function useAnalysisDashboard() {
     setError("");
 
     try {
-      setConfigs(await listConfigs());
+      setConfigs((await listConfigs()).reverse());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load configs");
     } finally {

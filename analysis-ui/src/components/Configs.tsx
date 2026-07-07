@@ -11,10 +11,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import { equipmentOptions } from "../constants";
 import type { ConfigResponse } from "../types";
 
 type ConfigTableProps = {
@@ -26,15 +28,48 @@ type ConfigTableProps = {
   onAnalyze: (configId: string) => void;
 };
 
-function selectedEquipmentCount(config: ConfigResponse) {
-  return Object.values(config.equipment ?? {}).filter(Boolean).length;
+function selectedEquipmentLabels(config: ConfigResponse) {
+  return equipmentOptions
+    .filter((option) => config.equipment?.[option.key])
+    .map((option) => option.label);
 }
 
 function shortId(id: string) {
   return id.slice(0, 8);
 }
 
-export function ConfigTable({
+function EquipmentTooltip({ config }: { config: ConfigResponse }) {
+  const labels = selectedEquipmentLabels(config);
+
+  return (
+    <Tooltip
+      arrow
+      title={
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          {labels.length > 0 ? (
+            labels.map((label) => (
+              <Typography color="inherit" key={label} variant="caption">
+                {label}
+              </Typography>
+            ))
+          ) : (
+            <Typography color="inherit" variant="caption">
+              No equipment selected
+            </Typography>
+          )}
+        </Box>
+      }
+    >
+      <Chip
+        size="small"
+        variant="outlined"
+        label={`${labels.length} selected`}
+      />
+    </Tooltip>
+  );
+}
+
+export function Configs({
   configs,
   loading,
   startingConfigId,
@@ -56,7 +91,12 @@ export function ConfigTable({
               Select a saved config and start an analysis run.
             </Typography>
           </Box>
-          <Button variant="text" startIcon={<AddIcon />} onClick={onCreateClick} size="small">
+          <Button
+            variant="text"
+            startIcon={<AddIcon />}
+            onClick={onCreateClick}
+            size="small"
+          >
             Create Config
           </Button>
         </Stack>
@@ -90,7 +130,9 @@ export function ConfigTable({
                     <TableCell>{config.engineModel}</TableCell>
                     <TableCell>{config.cylinderVariant}</TableCell>
                     <TableCell>{config.gearboxType}</TableCell>
-                    <TableCell>{selectedEquipmentCount(config)}</TableCell>
+                    <TableCell>
+                      <EquipmentTooltip config={config} />
+                    </TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Chip size="small" label={shortId(config.id)} />

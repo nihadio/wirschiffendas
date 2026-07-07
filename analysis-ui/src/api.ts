@@ -3,13 +3,6 @@ import type { Cluster, ConfigResponse, OptionalEquipmentConfig } from "./types";
 const CONFIG_API = "http://localhost:3001";
 const COORDINATOR_API = "http://localhost:3000";
 
-const SERVICE_APIS: Record<Cluster, string> = {
-  fluids: "http://localhost:3002",
-  drivetrain: "http://localhost:3003",
-  mechanical: "http://localhost:3004",
-  ems: "http://localhost:3005",
-};
-
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
 
@@ -62,10 +55,13 @@ export function retryCluster(
 export function simulateCluster(
   cluster: Cluster,
   state: "down" | "up",
-): Promise<{ down: boolean }> {
-  return request<{ down: boolean }>(`${SERVICE_APIS[cluster]}/simulate/${state}`, {
-    method: "POST",
-  });
+): Promise<{ down: boolean; cluster: Cluster }> {
+  return request<{ down: boolean; cluster: Cluster }>(
+    `${COORDINATOR_API}/simulate/${cluster}/${state}`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function createEventSource(runId: string): EventSource {

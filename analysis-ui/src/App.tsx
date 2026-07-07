@@ -7,8 +7,8 @@ import {
   Typography,
 } from "@mui/material";
 import { ConfigDialog } from "./components/ConfigDialog";
-import { ConfigTable } from "./components/ConfigTable";
 import { ManualFailureControls } from "./components/ManualFailureControls";
+import { Configs } from "./components/Configs";
 import { Runs } from "./components/Runs";
 import { useAnalysisDashboard } from "./hooks/useAnalysisDashboard";
 
@@ -34,7 +34,7 @@ function App() {
           <Alert severity="success">{dashboard.info}</Alert>
         ) : null}
 
-        <ConfigTable
+        <Configs
           configs={dashboard.configs}
           loading={dashboard.loadingConfigs}
           startingConfigId={dashboard.startingConfigId}
