@@ -9,8 +9,4 @@ export class AlgorithmClient {
   analyze(cluster: Cluster, request: AnalyzeRequest) {
     return this.httpClient.post(`${ENV.urls[cluster]}/analyze`, request);
   }
-
-  resetEms(runId: string) {
-    return this.httpClient.delete(`${ENV.urls.ems}/analyze/${runId}`);
-  }
 }

@@ -58,6 +58,10 @@ export class AnalysisService {
     return this.getRun(runId).clusters[cluster]?.results;
   }
 
+  getClusterStatus(runId: string, cluster: Cluster) {
+    return this.getRun(runId).clusters[cluster]?.status;
+  }
+
   resetForRetry(runId: string, cluster: Cluster) {
     const run = this.getRun(runId);
 
@@ -65,13 +69,16 @@ export class AnalysisService {
       run.clusters = {};
     } else {
       delete run.clusters[cluster];
-      delete run.clusters[Cluster.EMS];
+
+      if (cluster !== Cluster.EMS) {
+        delete run.clusters[Cluster.EMS];
+      }
     }
 
     run.overallEmitted = false;
   }
 
-  applyStatusMessage(message: StatusMessage, reason?: FailureReason) {
+  applyStatusMessage(message: StatusMessage) {
     const run = this.runs.get(message.runId);
 
     if (!run) {
@@ -86,7 +93,6 @@ export class AnalysisService {
     run.subject.next({
       type: "status",
       ...message,
-      ...(reason ? { reason } : {}),
     });
 
     if (message.status === AlgorithmStatus.FAILED) {
@@ -163,17 +169,15 @@ export class AnalysisService {
   }
 }
 
-export type FailureReason = "blocked";
-
 export type StreamEvent =
-  | ({ type: "status"; reason?: FailureReason } & StatusMessage)
+  | ({ type: "status" } & StatusMessage)
   | ({ type: "result" } & ResultMessage)
   | { type: "overall"; runId: string; overall: AnalysisResult };
 
 type Run = {
   subject: ReplaySubject<StreamEvent>;
   clusters: Partial<
-    Record<Cluster, { status?: string; results?: EquipmentResult[] }>
+    Record<Cluster, { status?: AlgorithmStatus; results?: EquipmentResult[] }>
   >;
   config: OptionalEquipmentConfig;
   overallEmitted?: boolean;

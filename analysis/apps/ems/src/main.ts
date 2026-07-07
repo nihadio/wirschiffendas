@@ -1,7 +1,9 @@
 import { ENV } from "./environment";
 import { NestFactory } from "@nestjs/core";
+import { MicroserviceOptions } from "@nestjs/microservices";
 import { EmsModule } from "./EmsModule";
 import {
+  createKafkaOptions,
   setupGlobalExceptionFilter,
   setupGlobalValidationPipe,
   setupSwagger,
@@ -13,6 +15,10 @@ async function bootstrap() {
   setupGlobalValidationPipe(app);
   setupGlobalExceptionFilter(app);
   setupSwagger(app, { title: "EMS" });
+
+  app.connectMicroservice<MicroserviceOptions>(createKafkaOptions("ems"));
+
+  await app.startAllMicroservices();
 
   await app.listen(ENV.port);
 }

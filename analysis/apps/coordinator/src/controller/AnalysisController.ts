@@ -24,7 +24,7 @@ export class AnalysisController {
     const runId = randomUUID();
     this.analysisService.createRun(runId, config);
 
-    const request: AnalyzeRequest = { runId, config, upstreamResults: [] };
+    const request: AnalyzeRequest = { runId, config };
     this.clusterGateway.startFluids(request);
 
     return { runId };

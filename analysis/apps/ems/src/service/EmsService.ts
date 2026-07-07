@@ -7,6 +7,7 @@ import {
   Equipment,
   EquipmentResult,
   KafkaClient,
+  StatusMessage,
 } from "@shared";
 
 const ANALYSIS_DURATION_MS = 7_000;
@@ -42,10 +43,11 @@ export class EmsService {
       upstreamByCluster: {},
     };
 
-    run.upstreamByCluster[request.upstreamCluster] = {
-      results: request.upstreamResults ?? [],
-      failed: request.upstreamFailed ?? false,
-    };
+    if (!request.upstreamResults?.length) {
+      throw new BadRequestException("EMS requires upstreamResults.");
+    }
+
+    run.upstreamByCluster[request.upstreamCluster] = request.upstreamResults;
 
     this.runs.set(request.runId, run);
 
@@ -59,20 +61,37 @@ export class EmsService {
 
     run.running = true;
 
-    const upstreams = this.requiredUpstreamClusters.map(
-      (cluster) => run.upstreamByCluster[cluster]!,
+    const upstreamResults = this.requiredUpstreamClusters.flatMap(
+      (cluster) => run.upstreamByCluster[cluster] ?? [],
     );
 
-    void this.run(request.runId, upstreams).finally(() => {
+    void this.run(request.runId, upstreamResults).finally(() => {
       run.running = false;
     });
   }
 
-  reset(runId: string) {
-    this.runs.delete(runId);
+  handleUpstreamStatus(message: StatusMessage) {
+    if (
+      message.status !== AlgorithmStatus.FAILED ||
+      !this.requiredUpstreamClusters.includes(message.cluster)
+    ) {
+      return;
+    }
+
+    const run = this.runs.get(message.runId) ?? {
+      upstreamByCluster: {},
+    };
+
+    this.runs.set(message.runId, run);
+
+    this.kafkaClient.emitStatus({
+      runId: message.runId,
+      cluster: this.cluster,
+      status: AlgorithmStatus.FAILED,
+    });
   }
 
-  private async run(runId: string, upstreams: UpstreamInput[]) {
+  private async run(runId: string, upstreamResults: EquipmentResult[]) {
     this.kafkaClient.emitStatus({
       runId,
       cluster: this.cluster,
@@ -81,10 +100,8 @@ export class EmsService {
 
     await new Promise((r) => setTimeout(r, ANALYSIS_DURATION_MS));
 
-    const dependent = upstreams.some(
-      (upstream) =>
-        upstream.failed ||
-        upstream.results.some((r) => r.result === AnalysisResult.FAILED),
+    const dependent = upstreamResults.some(
+      (result) => result.result === AnalysisResult.FAILED,
     )
       ? AnalysisResult.FAILED
       : AnalysisResult.OK;
@@ -108,12 +125,7 @@ export class EmsService {
   }
 }
 
-type UpstreamInput = {
-  results: EquipmentResult[];
-  failed: boolean;
-};
-
 type EmsRunState = {
-  upstreamByCluster: Partial<Record<Cluster, UpstreamInput>>;
+  upstreamByCluster: Partial<Record<Cluster, EquipmentResult[]>>;
   running?: boolean;
 };

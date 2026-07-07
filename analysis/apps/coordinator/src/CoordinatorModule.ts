@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
-import { HttpClient } from "@shared";
+import { createKafkaClientProvider, HttpClient, KafkaClient } from "@shared";
 import { AlgorithmClient } from "./client/AlgorithmClient";
 import { ConfigClient } from "./client/ConfigClient";
 import { SimulationClient } from "./client/SimulationClient";
@@ -9,9 +9,10 @@ import { EventController } from "./controller/EventController";
 import { SimulationController } from "./controller/SimulationController";
 import { ClusterGateway } from "./gateway/ClusterGateway";
 import { AnalysisService } from "./service/AnalysisService";
+import { ClientsModule } from "@nestjs/microservices";
 
 @Module({
-  imports: [HttpModule],
+  imports: [ClientsModule.register([createKafkaClientProvider()]), HttpModule],
   controllers: [EventController, AnalysisController, SimulationController],
   providers: [
     AnalysisService,
@@ -20,6 +21,7 @@ import { AnalysisService } from "./service/AnalysisService";
     AlgorithmClient,
     SimulationClient,
     HttpClient,
+    KafkaClient,
   ],
 })
 export class CoordinatorModule {}

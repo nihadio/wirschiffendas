@@ -10,13 +10,15 @@ import {
   AnalyzeRequest,
   Cluster,
   createCircuitBreaker,
+  FailureReason,
+  KafkaClient,
   OptionalEquipmentConfig,
 } from "@shared";
 import type CircuitBreaker from "opossum";
 import { AlgorithmClient } from "../client/AlgorithmClient";
 import { ConfigClient } from "../client/ConfigClient";
 import { SimulationClient } from "../client/SimulationClient";
-import { AnalysisService, FailureReason } from "../service/AnalysisService";
+import { AnalysisService } from "../service/AnalysisService";
 
 @Injectable()
 export class ClusterGateway {
@@ -34,6 +36,7 @@ export class ClusterGateway {
     private configClient: ConfigClient,
     private algorithmClient: AlgorithmClient,
     private simulationClient: SimulationClient,
+    private kafkaClient: KafkaClient,
   ) {
     this.configBreaker = createCircuitBreaker(
       "coordinator->config",
@@ -47,13 +50,7 @@ export class ClusterGateway {
 
     this.analyzeBreakers = {
       [Cluster.FLUIDS]: this.createAnalyzeBreaker(Cluster.FLUIDS, (request) =>
-        Object.values(Cluster).forEach((cluster) =>
-          this.applyFailure(
-            request.runId,
-            cluster,
-            cluster === Cluster.FLUIDS ? undefined : "blocked",
-          ),
-        ),
+        this.failFluidsChain(request),
       ),
       [Cluster.DRIVETRAIN]: this.createAnalyzeBreaker(
         Cluster.DRIVETRAIN,
@@ -85,44 +82,16 @@ export class ClusterGateway {
     void this.analyzeBreakers[Cluster.FLUIDS].fire(request);
   }
 
-  async retry(runId: string, cluster: string) {
+  retry(runId: string, cluster: string) {
     if (!Object.values(Cluster).includes(cluster as Cluster)) {
       throw new BadRequestException(`Unknown cluster "${cluster}".`);
     }
 
     const retriedCluster = cluster as Cluster;
     const config = this.analysisService.getConfig(runId);
-
     this.analysisService.resetForRetry(runId, retriedCluster);
-
     this.analyzeBreakers[retriedCluster].close();
-    this.analyzeBreakers[Cluster.EMS].close();
-
-    if (retriedCluster === Cluster.FLUIDS) {
-      await this.resetEms(runId);
-
-      void this.analyzeBreakers[Cluster.FLUIDS].fire({
-        runId,
-        config,
-        upstreamResults: [],
-      });
-    } else if (retriedCluster === Cluster.EMS) {
-      this.retryEms(runId, config);
-    } else {
-      await this.resetEms(runId);
-
-      const sibling =
-        retriedCluster === Cluster.DRIVETRAIN
-          ? Cluster.MECHANICAL
-          : Cluster.DRIVETRAIN;
-
-      void this.analyzeBreakers[Cluster.EMS].fire(
-        this.buildUpstreamReplay(runId, config, sibling),
-      );
-
-      void this.analyzeBreakers[retriedCluster].fire({ runId, config });
-    }
-
+    void this.analyzeBreakers[retriedCluster].fire({ runId, config });
     return {
       accepted: true,
       runId,
@@ -160,29 +129,6 @@ export class ClusterGateway {
     };
   }
 
-  private retryEms(runId: string, config: OptionalEquipmentConfig) {
-    for (const upstream of [Cluster.DRIVETRAIN, Cluster.MECHANICAL]) {
-      void this.analyzeBreakers[Cluster.EMS].fire(
-        this.buildUpstreamReplay(runId, config, upstream),
-      );
-    }
-  }
-
-  private buildUpstreamReplay(
-    runId: string,
-    config: OptionalEquipmentConfig,
-    upstream: Cluster,
-  ): AnalyzeRequest {
-    const stored = this.analysisService.getClusterResults(runId, upstream);
-
-    return {
-      runId,
-      config,
-      upstreamCluster: upstream,
-      ...(stored ? { upstreamResults: stored } : { upstreamFailed: true }),
-    };
-  }
-
   private createAnalyzeBreaker(
     cluster: Cluster,
     fallback: (request: AnalyzeRequest) => void,
@@ -197,13 +143,12 @@ export class ClusterGateway {
 
   private failUpstreamCluster(request: AnalyzeRequest, cluster: Cluster) {
     this.applyFailure(request.runId, cluster);
+  }
 
-    void this.analyzeBreakers[Cluster.EMS].fire({
-      runId: request.runId,
-      config: request.config,
-      upstreamCluster: cluster,
-      upstreamFailed: true,
-    });
+  private failFluidsChain(request: AnalyzeRequest) {
+    this.applyFailure(request.runId, Cluster.FLUIDS);
+    this.applyFailure(request.runId, Cluster.DRIVETRAIN, "blocked");
+    this.applyFailure(request.runId, Cluster.MECHANICAL, "blocked");
   }
 
   private applyFailure(
@@ -211,21 +156,11 @@ export class ClusterGateway {
     cluster: Cluster,
     reason?: FailureReason,
   ) {
-    this.analysisService.applyStatusMessage(
-      {
-        runId,
-        cluster,
-        status: AlgorithmStatus.FAILED,
-      },
-      reason,
-    );
-  }
-
-  private async resetEms(runId: string) {
-    try {
-      await this.algorithmClient.resetEms(runId);
-    } catch {
-      // best effort: EMS may be down during retry reset
-    }
+    this.kafkaClient.emitStatus({
+      runId,
+      cluster,
+      status: AlgorithmStatus.FAILED,
+      ...(reason ? { reason } : {}),
+    });
   }
 }

@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
 import { DrivetrainClient } from "./client/DrivetrainClient";
-import { EmsClient } from "./client/EmsClient";
 import { MechanicalClient } from "./client/MechanicalClient";
 import { FluidsController } from "./controller/FluidsController";
 import { FluidsService } from "./service/FluidsService";
@@ -21,7 +20,6 @@ import { ClientsModule } from "@nestjs/microservices";
     FluidsService,
     DrivetrainClient,
     MechanicalClient,
-    EmsClient,
     HttpClient,
     KafkaClient,
     SimulationStateService,

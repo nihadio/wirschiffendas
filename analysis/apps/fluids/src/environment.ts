@@ -7,6 +7,5 @@ export const ENV = {
   urls: {
     drivetrain: process.env.DRIVETRAIN_URL ?? "http://localhost:3003",
     mechanical: process.env.MECHANICAL_URL ?? "http://localhost:3004",
-    ems: process.env.EMS_URL ?? "http://localhost:3005",
   },
 } as const;

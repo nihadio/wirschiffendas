@@ -56,7 +56,6 @@ services:
       KAFKA_BROKER: kafka:19092
       DRIVETRAIN_URL: http://drivetrain:3003
       MECHANICAL_URL: http://mechanical:3004
-      EMS_URL: http://ems:3005
     depends_on:
       kafka:
         condition: service_healthy
@@ -121,4 +120,3 @@ services:
 volumes:
   configdb-data:
     name: wirschiffendas-configdb-data
-

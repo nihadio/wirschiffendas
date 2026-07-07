@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-} from "@nestjs/common";
+import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AnalyzeRequest, SimulationStateService } from "@shared";
 import { EmsService } from "../service/EmsService";
@@ -36,18 +28,6 @@ export class EmsController {
     return {
       accepted: true,
       runId: body.runId,
-    };
-  }
-
-  @ApiOperation({ summary: "Reset cached upstream results for a run" })
-  @ApiResponse({ status: 200, description: "Cached upstream state cleared" })
-  @Delete("analyze/:runId")
-  reset(@Param("runId") runId: string) {
-    this.emsService.reset(runId);
-
-    return {
-      accepted: true,
-      runId,
     };
   }
 }

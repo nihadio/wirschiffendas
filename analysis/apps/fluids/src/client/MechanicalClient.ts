@@ -8,14 +8,12 @@ import {
   KafkaClient,
 } from "@shared";
 import { ENV } from "../environment";
-import { EmsClient } from "./EmsClient";
 
 @Injectable()
 export class MechanicalClient {
   constructor(
     private kafkaClient: KafkaClient,
     private httpClient: HttpClient,
-    private emsClient: EmsClient,
   ) {}
 
   @CircuitBreaker("fluids->mechanical", "onUnreachable")
@@ -28,13 +26,6 @@ export class MechanicalClient {
       runId: request.runId,
       cluster: Cluster.MECHANICAL,
       status: AlgorithmStatus.FAILED,
-    });
-
-    void this.emsClient.analyze({
-      runId: request.runId,
-      config: request.config,
-      upstreamCluster: Cluster.MECHANICAL,
-      upstreamFailed: true,
     });
   }
 }
