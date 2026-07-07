@@ -78,7 +78,6 @@ export function useAnalysisDashboard() {
     try {
       setSimulationDownByCluster(await fetchSimulationStates());
     } catch {
-      // coordinator unreachable — keep the optimistic defaults
     }
   }
 
@@ -240,6 +239,7 @@ export function useAnalysisDashboard() {
               [streamEvent.cluster]: {
                 ...currentCluster,
                 status: streamEvent.status,
+                reason: streamEvent.reason,
               },
             },
           };

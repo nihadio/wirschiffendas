@@ -37,11 +37,14 @@ export type EquipmentResult = {
   result: AnalysisResult;
 };
 
+export type FailureReason = "blocked";
+
 export type StatusEvent = {
   type: "status";
   runId: string;
   cluster: Cluster;
   status: AlgorithmStatus;
+  reason?: FailureReason;
 };
 
 export type ResultEvent = {
@@ -61,6 +64,7 @@ export type StreamEvent = StatusEvent | ResultEvent | OverallEvent;
 
 export type ClusterState = {
   status?: AlgorithmStatus;
+  reason?: FailureReason;
   results: EquipmentResult[];
 };
 

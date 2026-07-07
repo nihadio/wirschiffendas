@@ -79,12 +79,7 @@ function ClusterCell({
   }
 
   if (state.status === "failed") {
-    // fluids anchors the chain: while it is failed, downstream clusters were
-    // never reached — retrying them individually cannot fix the run
-    const blockedByAnchor =
-      cluster !== "fluids" && run.clusterState.fluids.status === "failed";
-
-    if (blockedByAnchor) {
+    if (state.reason === "blocked") {
       return (
         <Tooltip title="Never reached: fluids failed, so the chain did not start this service. Retry fluids to re-run everything.">
           <Chip size="small" variant="outlined" label="Blocked" />
