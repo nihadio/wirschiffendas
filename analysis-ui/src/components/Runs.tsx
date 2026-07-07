@@ -12,6 +12,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
   IconButton,
 } from "@mui/material";
@@ -78,6 +79,19 @@ function ClusterCell({
   }
 
   if (state.status === "failed") {
+    // fluids anchors the chain: while it is failed, downstream clusters were
+    // never reached — retrying them individually cannot fix the run
+    const blockedByAnchor =
+      cluster !== "fluids" && run.clusterState.fluids.status === "failed";
+
+    if (blockedByAnchor) {
+      return (
+        <Tooltip title="Never reached: fluids failed, so the chain did not start this service. Retry fluids to re-run everything.">
+          <Chip size="small" variant="outlined" label="Blocked" />
+        </Tooltip>
+      );
+    }
+
     return (
       <Stack direction="row" spacing={1} alignItems="center">
         <Chip size="small" color="error" label="Failed" />
@@ -192,7 +206,7 @@ export function Runs({ runs, busyAction, onRetry }: RunsProps) {
         <TableContainer>
           <Table size="small" sx={{ minWidth: 980 }}>
             <TableHead>
-              <TableRow>
+              <TableRow sx={{ "& th": { whiteSpace: "nowrap" } }}>
                 <TableCell>Run ID</TableCell>
                 <TableCell>Config ID</TableCell>
                 <TableCell>Name</TableCell>

@@ -12,6 +12,10 @@ export class SimulationStateService {
     this.down = false;
   }
 
+  isDown() {
+    return this.down;
+  }
+
   assertUp() {
     if (this.down) {
       throw new ServiceUnavailableException("Service is simulated down.");

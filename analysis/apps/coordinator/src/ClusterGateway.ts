@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   ServiceUnavailableException,
 } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
+import { isAxiosError } from "axios";
 import {
   AlgorithmStatus,
   AnalyzeRequest,
@@ -41,6 +43,13 @@ export class ClusterGateway {
             `${CONFIG.env.urls.config}/configs/${configId}`,
           ),
         ).then((response) => response.data),
+      undefined,
+      {
+        // a 4xx answer means the service is healthy and rejected the input;
+        // it still fails this call but must not open the circuit
+        errorFilter: (error) =>
+          isAxiosError(error) && (error.response?.status ?? 500) < 500,
+      },
     );
 
     this.analyzeBreakers = {
@@ -67,7 +76,12 @@ export class ClusterGateway {
   async getConfig(configId: string) {
     try {
       return await this.configBreaker.fire(configId);
-    } catch {
+    } catch (error) {
+      // config service answered — the config just does not exist
+      if (isAxiosError(error) && error.response?.status === 404) {
+        throw new NotFoundException(`Config ${configId} not found`);
+      }
+
       throw new ServiceUnavailableException("Config service unavailable.");
     }
   }
@@ -85,6 +99,12 @@ export class ClusterGateway {
     const config = this.analysisService.getConfig(runId); // 404 if run unknown
 
     this.analysisService.resetForRetry(runId, retriedCluster);
+
+    // a manual retry is the user asserting the service is back: force the
+    // circuit closed so the call really goes to the network instead of
+    // short-circuiting to the fallback while the open-window lasts
+    this.analyzeBreakers[retriedCluster].close();
+    this.analyzeBreakers[Cluster.EMS].close();
 
     if (retriedCluster === Cluster.FLUIDS) {
       // clear EMS upstream cache, otherwise the first re-run upstream
@@ -126,6 +146,28 @@ export class ClusterGateway {
       runId,
       cluster: retriedCluster,
     };
+  }
+
+  async simulationStates() {
+    const entries = await Promise.all(
+      Object.values(Cluster).map(async (cluster) => {
+        try {
+          const { data } = await firstValueFrom(
+            this.httpService.get<{ down: boolean }>(
+              `${CONFIG.env.urls[cluster]}/simulate`,
+              { timeout: 3_000 },
+            ),
+          );
+
+          return [cluster, data.down] as const;
+        } catch {
+          // unreachable is indistinguishable from down for the caller
+          return [cluster, true] as const;
+        }
+      }),
+    );
+
+    return Object.fromEntries(entries) as Record<Cluster, boolean>;
   }
 
   async simulate(cluster: string, state: "down" | "up") {

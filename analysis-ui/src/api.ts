@@ -52,6 +52,10 @@ export function retryCluster(
   );
 }
 
+export function fetchSimulationStates(): Promise<Record<Cluster, boolean>> {
+  return request<Record<Cluster, boolean>>(`${COORDINATOR_API}/simulate`);
+}
+
 export function simulateCluster(
   cluster: Cluster,
   state: "down" | "up",

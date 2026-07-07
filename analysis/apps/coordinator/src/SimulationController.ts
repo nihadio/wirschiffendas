@@ -1,4 +1,4 @@
-import { Controller, Param, Post } from "@nestjs/common";
+import { Controller, Get, Param, Post } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Cluster } from "@shared";
 import { ClusterGateway } from "./ClusterGateway";
@@ -7,6 +7,15 @@ import { ClusterGateway } from "./ClusterGateway";
 @Controller("simulate")
 export class SimulationController {
   constructor(private readonly clusterGateway: ClusterGateway) {}
+
+  @ApiOperation({
+    summary: "Current simulation state of all analysis services",
+  })
+  @ApiResponse({ status: 200, description: "Down flag per cluster" })
+  @Get()
+  states() {
+    return this.clusterGateway.simulationStates();
+  }
 
   @ApiOperation({ summary: "Simulate one analysis service being down" })
   @ApiParam({ name: "cluster", enum: Cluster })

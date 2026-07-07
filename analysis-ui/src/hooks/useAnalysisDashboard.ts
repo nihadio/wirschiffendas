@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createConfig,
   createEventSource,
+  fetchSimulationStates,
   listConfigs,
   retryCluster,
   simulateCluster,
@@ -65,12 +66,21 @@ export function useAnalysisDashboard() {
 
   useEffect(() => {
     void loadConfigs();
+    void loadSimulationStates();
 
     return () => {
       eventSourcesRef.current.forEach((eventSource) => eventSource.close());
       eventSourcesRef.current.clear();
     };
   }, []);
+
+  async function loadSimulationStates() {
+    try {
+      setSimulationDownByCluster(await fetchSimulationStates());
+    } catch {
+      // coordinator unreachable — keep the optimistic defaults
+    }
+  }
 
   async function loadConfigs() {
     setLoadingConfigs(true);

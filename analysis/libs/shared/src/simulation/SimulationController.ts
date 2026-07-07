@@ -1,4 +1,4 @@
-import { Controller, Post } from "@nestjs/common";
+import { Controller, Get, Post } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SimulationStateService } from "./SimulationStateService";
 
@@ -6,6 +6,13 @@ import { SimulationStateService } from "./SimulationStateService";
 @Controller("simulate")
 export class SimulationController {
   constructor(private readonly simulationState: SimulationStateService) {}
+
+  @ApiOperation({ summary: "Current simulation state of this service" })
+  @ApiResponse({ status: 200, description: "Whether the service is down" })
+  @Get()
+  state() {
+    return { down: this.simulationState.isDown() };
+  }
 
   @ApiOperation({ summary: "Simulate this service being down" })
   @ApiResponse({ status: 201, description: "Service now rejects /analyze" })

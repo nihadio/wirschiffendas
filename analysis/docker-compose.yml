@@ -32,6 +32,92 @@ services:
       interval: 5s
       retries: 10
 
+  config:
+    build:
+      context: .
+      args:
+        APP: config
+    restart: on-failure
+    environment:
+      DB_HOST: configdb
+    depends_on:
+      configdb:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+
+  fluids:
+    build:
+      context: .
+      args:
+        APP: fluids
+    restart: on-failure
+    environment:
+      KAFKA_BROKER: kafka:19092
+      DRIVETRAIN_URL: http://drivetrain:3003
+      MECHANICAL_URL: http://mechanical:3004
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  drivetrain:
+    build:
+      context: .
+      args:
+        APP: drivetrain
+    restart: on-failure
+    environment:
+      KAFKA_BROKER: kafka:19092
+      EMS_URL: http://ems:3005
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  mechanical:
+    build:
+      context: .
+      args:
+        APP: mechanical
+    restart: on-failure
+    environment:
+      KAFKA_BROKER: kafka:19092
+      EMS_URL: http://ems:3005
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  ems:
+    build:
+      context: .
+      args:
+        APP: ems
+    restart: on-failure
+    environment:
+      KAFKA_BROKER: kafka:19092
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  coordinator:
+    build:
+      context: .
+      args:
+        APP: coordinator
+    restart: on-failure
+    environment:
+      KAFKA_BROKER: kafka:19092
+      CONFIG_URL: http://config:3001
+      FLUIDS_URL: http://fluids:3002
+      DRIVETRAIN_URL: http://drivetrain:3003
+      MECHANICAL_URL: http://mechanical:3004
+      EMS_URL: http://ems:3005
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
 volumes:
   configdb-data:
     name: wirschiffendas-configdb-data
+
