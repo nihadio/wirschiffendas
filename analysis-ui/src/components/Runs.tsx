@@ -135,8 +135,10 @@ function ResultSummaryChip({ state }: { state: ClusterState }) {
       <Box>
         <Chip
           size="small"
-          color={statusColor(state.status)}
-          label="Ready"
+          color={summary.failed > 0 ? "error" : statusColor(state.status)}
+          label={
+            summary.failed > 0 ? `Ready · ${summary.failed} failed` : "Ready"
+          }
           onClick={(event) =>
             setAnchorEl(anchorEl ? null : event.currentTarget)
           }

@@ -7,7 +7,12 @@ import {
   simulateCluster,
   startAnalysis,
 } from "../api";
-import { clusterLabel, emptyClusterState, initialForm } from "../constants";
+import {
+  clusterLabel,
+  clusters,
+  emptyClusterState,
+  initialForm,
+} from "../constants";
 import type {
   AnalysisRun,
   Cluster,
@@ -26,6 +31,17 @@ export function useAnalysisDashboard() {
   const [startingConfigId, setStartingConfigId] = useState("");
   const [loadingConfigs, setLoadingConfigs] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [simulationDownByCluster, setSimulationDownByCluster] = useState<
+    Record<Cluster, boolean>
+  >(() =>
+    clusters.reduce(
+      (acc, cluster) => ({
+        ...acc,
+        [cluster.key]: false,
+      }),
+      {} as Record<Cluster, boolean>,
+    ),
+  );
   const [busyAction, setBusyAction] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
@@ -153,6 +169,10 @@ export function useAnalysisDashboard() {
 
     try {
       await simulateCluster(cluster, state);
+      setSimulationDownByCluster((current) => ({
+        ...current,
+        [cluster]: state === "down",
+      }));
       setInfo(`${clusterLabel(cluster)} simulated ${state}`);
     } catch (err) {
       setError(
@@ -309,6 +329,7 @@ export function useAnalysisDashboard() {
     startingConfigId,
     loadingConfigs,
     configDialogOpen,
+    simulationDownByCluster,
     busyAction,
     error,
     info,
