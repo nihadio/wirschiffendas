@@ -3,6 +3,7 @@ import {
   AnalysisResult,
   Cluster,
   EquipmentResult,
+  OptionalEquipmentConfig,
   ResultMessage,
   StatusMessage,
 } from "@shared";
@@ -13,21 +14,39 @@ export class AnalysisService {
   private runs = new Map<string, Run>();
   private readonly resultClusters = Object.values(Cluster);
 
-  createRun(runId: string) {
+  createRun(runId: string, config: OptionalEquipmentConfig) {
     this.runs.set(runId, {
       subject: new ReplaySubject(50),
       clusters: {},
+      config,
     });
   }
 
   stream(runId: string) {
-    const run = this.runs.get(runId);
+    return this.getRun(runId).subject.asObservable();
+  }
 
-    if (!run) {
-      throw new NotFoundException(`Run ${runId} not found`);
+  getConfig(runId: string) {
+    return this.getRun(runId).config;
+  }
+
+  getClusterResults(runId: string, cluster: Cluster) {
+    return this.getRun(runId).clusters[cluster]?.results;
+  }
+
+  resetForRetry(runId: string, cluster: Cluster) {
+    const run = this.getRun(runId);
+
+    if (cluster === Cluster.FLUIDS) {
+      run.clusters = {};
+    } else {
+      delete run.clusters[cluster];
+      // EMS depends on drivetrain/mechanical; stale EMS results would
+      // trigger a premature overall as soon as the retried cluster reports
+      delete run.clusters[Cluster.EMS];
     }
 
-    return run.subject.asObservable();
+    run.overallEmitted = false;
   }
 
   applyStatusMessage(message: StatusMessage) {
@@ -94,6 +113,16 @@ export class AnalysisService {
       overall,
     });
   }
+
+  private getRun(runId: string) {
+    const run = this.runs.get(runId);
+
+    if (!run) {
+      throw new NotFoundException(`Run ${runId} not found`);
+    }
+
+    return run;
+  }
 }
 
 export type StreamEvent =
@@ -103,6 +132,9 @@ export type StreamEvent =
 
 type Run = {
   subject: ReplaySubject<StreamEvent>;
-  clusters: Record<string, { status?: string; results?: EquipmentResult[] }>;
+  clusters: Partial<
+    Record<Cluster, { status?: string; results?: EquipmentResult[] }>
+  >;
+  config: OptionalEquipmentConfig;
   overallEmitted?: boolean;
 };

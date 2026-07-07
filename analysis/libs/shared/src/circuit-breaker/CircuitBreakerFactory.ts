@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import CircuitBreaker from "opossum";
 
 const DEFAULT_OPTIONS: CircuitBreaker.Options = {
@@ -21,6 +22,14 @@ export function createCircuitBreaker<TArgs extends unknown[], TResult>(
   if (fallback) {
     breaker.fallback(fallback);
   }
+
+  const logger = new Logger(`CircuitBreaker:${name}`);
+  breaker.on("failure", (error: Error) =>
+    logger.warn(`call failed: ${error.message}`),
+  );
+  breaker.on("open", () => logger.warn("circuit opened"));
+  breaker.on("halfOpen", () => logger.log("circuit half-open, probing"));
+  breaker.on("close", () => logger.log("circuit closed"));
 
   return breaker;
 }

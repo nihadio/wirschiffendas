@@ -2,16 +2,20 @@ import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
 import { ClientKafka } from "@nestjs/microservices";
 import {
+  ALGORITHM_DURATION_MS,
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
+  buildFailedResults,
   Cluster,
   CONFIG,
+  createCircuitBreaker,
   EQUIPMENT_BY_CLUSTER,
   EquipmentResult,
   KAFKA_CLIENT,
   KafkaTopics,
 } from "@shared";
+import type CircuitBreaker from "opossum";
 import { firstValueFrom } from "rxjs";
 
 @Injectable()
@@ -19,10 +23,21 @@ export class MechanicalService implements OnModuleInit {
   private readonly cluster = Cluster.MECHANICAL;
   private readonly equipments = EQUIPMENT_BY_CLUSTER[Cluster.MECHANICAL];
 
+  private readonly emsBreaker: CircuitBreaker<[AnalyzeRequest]>;
+
   constructor(
     @Inject(KAFKA_CLIENT) private kafka: ClientKafka,
     @Inject(HttpService) private httpService: HttpService,
-  ) {}
+  ) {
+    this.emsBreaker = createCircuitBreaker(
+      "mechanical->ems",
+      (request: AnalyzeRequest) =>
+        firstValueFrom(
+          this.httpService.post(`${CONFIG.env.urls.ems}/analyze`, request),
+        ),
+      (request: AnalyzeRequest) => this.emitEmsFailure(request),
+    );
+  }
 
   async onModuleInit() {
     await this.kafka.connect();
@@ -39,7 +54,7 @@ export class MechanicalService implements OnModuleInit {
       status: AlgorithmStatus.RUNNING,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 20_000));
+    await new Promise((resolve) => setTimeout(resolve, ALGORITHM_DURATION_MS));
 
     const results: EquipmentResult[] = this.equipments.map((equipment) => ({
       equipment,
@@ -56,13 +71,25 @@ export class MechanicalService implements OnModuleInit {
       status: AlgorithmStatus.READY,
     });
 
-    void firstValueFrom(
-      this.httpService.post(`${CONFIG.env.urls.ems}/analyze`, {
-        runId: request.runId,
-        config: request.config,
-        upstreamCluster: this.cluster,
-        upstreamResults: results,
-      }),
-    );
+    void this.emsBreaker.fire({
+      runId: request.runId,
+      config: request.config,
+      upstreamCluster: this.cluster,
+      upstreamResults: results,
+    });
+  }
+
+  private emitEmsFailure(request: AnalyzeRequest) {
+    this.kafka.emit(KafkaTopics.STATUS, {
+      runId: request.runId,
+      cluster: Cluster.EMS,
+      status: AlgorithmStatus.FAILED,
+    });
+
+    this.kafka.emit(KafkaTopics.RESULT, {
+      runId: request.runId,
+      cluster: Cluster.EMS,
+      results: buildFailedResults(Cluster.EMS),
+    });
   }
 }

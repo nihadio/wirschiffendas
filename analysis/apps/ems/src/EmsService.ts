@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { ClientKafka } from "@nestjs/microservices";
 import {
+  ALGORITHM_DURATION_MS,
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
@@ -57,17 +58,25 @@ export class EmsService implements OnModuleInit {
       (cluster) => run.upstreamByCluster[cluster] !== undefined,
     );
 
-    if (!hasAllRequiredInputs) {
+    if (!hasAllRequiredInputs || run.running) {
       return;
     }
 
-    this.runs.delete(request.runId);
+    // upstream cache is kept after the run so a single retried upstream
+    // can re-trigger EMS; unbounded growth is accepted for this PoC
+    run.running = true;
 
     const upstream = this.requiredUpstreamClusters.flatMap(
       (cluster) => run.upstreamByCluster[cluster] ?? [],
     );
 
-    void this.run(request.runId, upstream);
+    void this.run(request.runId, upstream).finally(() => {
+      run.running = false;
+    });
+  }
+
+  reset(runId: string) {
+    this.runs.delete(runId);
   }
 
   private async run(runId: string, upstream: EquipmentResult[]) {
@@ -77,7 +86,7 @@ export class EmsService implements OnModuleInit {
       status: AlgorithmStatus.RUNNING,
     });
 
-    await new Promise((r) => setTimeout(r, 20_000));
+    await new Promise((r) => setTimeout(r, ALGORITHM_DURATION_MS));
 
     const dependent = upstream.some((r) => r.result === AnalysisResult.FAILED)
       ? AnalysisResult.FAILED
@@ -104,4 +113,5 @@ export class EmsService implements OnModuleInit {
 
 type EmsRunState = {
   upstreamByCluster: Partial<Record<Cluster, EquipmentResult[]>>;
+  running?: boolean;
 };
