@@ -204,6 +204,11 @@ export function useAnalysisDashboard() {
     eventSource.onmessage = (event) => {
       const streamEvent = JSON.parse(event.data) as StreamEvent;
       applyStreamEvent(streamEvent);
+
+      if (streamEvent.type === "overall") {
+        eventSource.close();
+        eventSourcesRef.current.delete(runId);
+      }
     };
 
     eventSource.onerror = () => {
