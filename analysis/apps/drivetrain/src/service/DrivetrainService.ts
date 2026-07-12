@@ -3,6 +3,7 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
+  assertUpstreamCluster,
   Cluster,
   Equipment,
   EquipmentResult,
@@ -25,7 +26,13 @@ export class DrivetrainService {
     private emsClient: EmsClient,
   ) {}
 
-  async run(request: AnalyzeRequest) {
+  analyze(request: AnalyzeRequest) {
+    assertUpstreamCluster(request, [Cluster.FLUIDS], this.cluster);
+
+    return this.run(request);
+  }
+
+  private async run(request: AnalyzeRequest) {
     const baseMessage = {
       runId: request.runId,
       cluster: this.cluster,

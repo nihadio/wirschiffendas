@@ -9,6 +9,6 @@ export class EventController {
 
   @EventPattern(KafkaTopics.STATUS)
   onStatusEvent(@Payload() message: StatusMessage) {
-    this.emsService.handleUpstreamStatus(message);
+    this.emsService.handleStatusMessage(message);
   }
 }

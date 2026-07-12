@@ -67,7 +67,7 @@ function App() {
 
         <ManualFailureControls
           busyAction={dashboard.busyAction}
-          simulationDownByCluster={dashboard.simulationDownByCluster}
+          simulationStatusByCluster={dashboard.simulationStatusByCluster}
           onSimulate={dashboard.simulate}
         />
       </Stack>

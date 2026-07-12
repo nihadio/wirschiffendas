@@ -1,25 +1,22 @@
 import { Injectable } from "@nestjs/common";
 import { Cluster, HttpClient } from "@shared";
+import type { SimulationStatus } from "@shared";
 import { ENV } from "../environment";
-
-type SimulationState = {
-  down: boolean;
-};
 
 @Injectable()
 export class SimulationClient {
   constructor(private httpClient: HttpClient) {}
 
-  getState(cluster: Cluster) {
-    return this.httpClient.get<SimulationState>(
-      `${ENV.urls[cluster]}/simulate`,
+  getStatus(cluster: Cluster) {
+    return this.httpClient.get<SimulationStatus>(
+      `${ENV.urls[cluster]}/simulation/status`,
       { timeout: 3_000 },
     );
   }
 
-  setState(cluster: Cluster, state: "down" | "up") {
-    return this.httpClient.post<SimulationState>(
-      `${ENV.urls[cluster]}/simulate/${state}`,
+  setStatus(cluster: Cluster, status: SimulationStatus) {
+    return this.httpClient.post<SimulationStatus>(
+      `${ENV.urls[cluster]}/simulation/${status}`,
       undefined,
       { timeout: 3_000 },
     );

@@ -8,7 +8,7 @@ import {
   HttpClient,
   KafkaClient,
   SimulationController,
-  SimulationStateService,
+  SimulationService,
 } from "@shared";
 import { ClientsModule } from "@nestjs/microservices";
 
@@ -20,7 +20,7 @@ import { ClientsModule } from "@nestjs/microservices";
     EmsClient,
     HttpClient,
     KafkaClient,
-    SimulationStateService,
+    SimulationService,
   ],
 })
 export class MechanicalModule {}

@@ -31,7 +31,7 @@ export class AnalyzeRequest {
 
   @ApiPropertyOptional({
     enum: Cluster,
-    description: "Cluster that produced upstreamResults; only sent to EMS.",
+    description: "Cluster that initiated this downstream analysis request.",
   })
   @IsOptional()
   @IsEnum(Cluster)
@@ -39,7 +39,7 @@ export class AnalyzeRequest {
 
   @ApiPropertyOptional({
     type: [EquipmentResult],
-    description: "Results of upstream algorithms; only sent to EMS.",
+    description: "Results produced by an upstream algorithm when required.",
   })
   @IsOptional()
   @IsArray()

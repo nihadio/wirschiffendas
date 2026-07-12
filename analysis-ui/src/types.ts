@@ -4,6 +4,8 @@ export type Cluster = (typeof CLUSTERS)[number];
 
 export type AlgorithmStatus = "running" | "ready" | "failed";
 
+export type SimulationStatus = "down" | "up";
+
 export type AnalysisResult = "ok" | "failed";
 
 export type CylinderVariant = "10V" | "12V" | "16V";

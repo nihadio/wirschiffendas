@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   createConfig,
   createEventSource,
-  fetchSimulationStates,
+  fetchSimulationStatuses,
   listConfigs,
   retryCluster,
   simulateCluster,
@@ -20,6 +20,7 @@ import type {
   ConfigResponse,
   Equipment,
   OptionalEquipmentConfig,
+  SimulationStatus,
   StreamEvent,
 } from "../types";
 
@@ -32,15 +33,15 @@ export function useAnalysisDashboard() {
   const [startingConfigId, setStartingConfigId] = useState("");
   const [loadingConfigs, setLoadingConfigs] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  const [simulationDownByCluster, setSimulationDownByCluster] = useState<
-    Record<Cluster, boolean>
+  const [simulationStatusByCluster, setSimulationStatusByCluster] = useState<
+    Record<Cluster, SimulationStatus>
   >(() =>
     clusters.reduce(
       (acc, cluster) => ({
         ...acc,
-        [cluster.key]: false,
+        [cluster.key]: "up",
       }),
-      {} as Record<Cluster, boolean>,
+      {} as Record<Cluster, SimulationStatus>,
     ),
   );
   const [busyAction, setBusyAction] = useState("");
@@ -66,7 +67,7 @@ export function useAnalysisDashboard() {
 
   useEffect(() => {
     void loadConfigs();
-    void loadSimulationStates();
+    void loadSimulationStatuses();
 
     return () => {
       eventSourcesRef.current.forEach((eventSource) => eventSource.close());
@@ -74,9 +75,9 @@ export function useAnalysisDashboard() {
     };
   }, []);
 
-  async function loadSimulationStates() {
+  async function loadSimulationStatuses() {
     try {
-      setSimulationDownByCluster(await fetchSimulationStates());
+      setSimulationStatusByCluster(await fetchSimulationStatuses());
     } catch {
     }
   }
@@ -171,23 +172,23 @@ export function useAnalysisDashboard() {
     }
   }
 
-  async function simulate(cluster: Cluster, state: "down" | "up") {
-    setBusyAction(`simulate-${cluster}-${state}`);
+  async function simulate(cluster: Cluster, status: SimulationStatus) {
+    setBusyAction(`simulate-${cluster}-${status}`);
     setError("");
     setInfo("");
 
     try {
-      await simulateCluster(cluster, state);
-      setSimulationDownByCluster((current) => ({
+      await simulateCluster(cluster, status);
+      setSimulationStatusByCluster((current) => ({
         ...current,
-        [cluster]: state === "down",
+        [cluster]: status,
       }));
-      setInfo(`${clusterLabel(cluster)} simulated ${state}`);
+      setInfo(`${clusterLabel(cluster)} simulated ${status}`);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : `Could not simulate ${clusterLabel(cluster)} ${state}`,
+          : `Could not simulate ${clusterLabel(cluster)} ${status}`,
       );
     } finally {
       setBusyAction("");
@@ -344,7 +345,7 @@ export function useAnalysisDashboard() {
     startingConfigId,
     loadingConfigs,
     configDialogOpen,
-    simulationDownByCluster,
+    simulationStatusByCluster,
     busyAction,
     error,
     info,

@@ -3,6 +3,7 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
+  assertUpstreamCluster,
   Cluster,
   Equipment,
   EquipmentResult,
@@ -10,7 +11,7 @@ import {
   StatusMessage,
 } from "@shared";
 
-const ANALYSIS_DURATION_MS = 7_000;
+const ANALYSIS_DURATION_MS = 5_000;
 
 @Injectable()
 export class EmsService {
@@ -22,22 +23,19 @@ export class EmsService {
 
   private readonly runs = new Map<string, EmsRunState>();
 
-  private readonly requiredUpstreamClusters: readonly Cluster[] = [
+  private readonly requiredUpstreamClusters: readonly [Cluster, Cluster] = [
     Cluster.DRIVETRAIN,
     Cluster.MECHANICAL,
   ];
 
   constructor(private kafkaClient: KafkaClient) {}
 
-  collect(request: AnalyzeRequest) {
-    if (
-      !request.upstreamCluster ||
-      !this.requiredUpstreamClusters.includes(request.upstreamCluster)
-    ) {
-      throw new BadRequestException(
-        "EMS requires upstreamCluster from drivetrain or mechanical.",
-      );
-    }
+  analyze(request: AnalyzeRequest) {
+    const upstreamCluster = assertUpstreamCluster(
+      request,
+      this.requiredUpstreamClusters,
+      this.cluster,
+    );
 
     const run = this.runs.get(request.runId) ?? {
       upstreamByCluster: {},
@@ -47,7 +45,7 @@ export class EmsService {
       throw new BadRequestException("EMS requires upstreamResults.");
     }
 
-    run.upstreamByCluster[request.upstreamCluster] = request.upstreamResults;
+    run.upstreamByCluster[upstreamCluster] = request.upstreamResults;
 
     this.runs.set(request.runId, run);
 
@@ -70,7 +68,7 @@ export class EmsService {
     });
   }
 
-  handleUpstreamStatus(message: StatusMessage) {
+  handleStatusMessage(message: StatusMessage) {
     if (
       message.status !== AlgorithmStatus.FAILED ||
       !this.requiredUpstreamClusters.includes(message.cluster)
@@ -88,6 +86,7 @@ export class EmsService {
       runId: message.runId,
       cluster: this.cluster,
       status: AlgorithmStatus.FAILED,
+      reason: "blocked",
     });
   }
 

@@ -3,6 +3,7 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
+  assertUpstreamCluster,
   Cluster,
   Equipment,
   EquipmentResult,
@@ -10,7 +11,7 @@ import {
 } from "@shared";
 import { EmsClient } from "../client/EmsClient";
 
-const ANALYSIS_DURATION_MS = 7_000;
+const ANALYSIS_DURATION_MS = 5_000;
 
 @Injectable()
 export class MechanicalService {
@@ -27,7 +28,13 @@ export class MechanicalService {
     private emsClient: EmsClient,
   ) {}
 
-  async run(request: AnalyzeRequest) {
+  analyze(request: AnalyzeRequest) {
+    assertUpstreamCluster(request, [Cluster.FLUIDS], this.cluster);
+
+    return this.run(request);
+  }
+
+  private async run(request: AnalyzeRequest) {
     const baseMessage = {
       runId: request.runId,
       cluster: this.cluster,

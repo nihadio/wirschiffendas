@@ -80,8 +80,13 @@ function ClusterCell({
 
   if (state.status === "failed") {
     if (state.reason === "blocked") {
+      const blockedReason =
+        cluster === "ems"
+          ? "Never reached: drivetrain or mechanical failed. Retry the failed upstream service."
+          : "Never reached: fluids failed, so the chain did not start this service. Retry fluids to re-run everything.";
+
       return (
-        <Tooltip title="Never reached: fluids failed, so the chain did not start this service. Retry fluids to re-run everything.">
+        <Tooltip title={blockedReason}>
           <Chip size="small" variant="outlined" label="Blocked" />
         </Tooltip>
       );

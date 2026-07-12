@@ -1,4 +1,9 @@
-import type { Cluster, ConfigResponse, OptionalEquipmentConfig } from "./types";
+import type {
+  Cluster,
+  ConfigResponse,
+  OptionalEquipmentConfig,
+  SimulationStatus,
+} from "./types";
 
 const CONFIG_API = "http://localhost:3001";
 const COORDINATOR_API = "http://localhost:3000";
@@ -52,16 +57,20 @@ export function retryCluster(
   );
 }
 
-export function fetchSimulationStates(): Promise<Record<Cluster, boolean>> {
-  return request<Record<Cluster, boolean>>(`${COORDINATOR_API}/simulate`);
+export function fetchSimulationStatuses(): Promise<
+  Record<Cluster, SimulationStatus>
+> {
+  return request<Record<Cluster, SimulationStatus>>(
+    `${COORDINATOR_API}/simulation/statuses`,
+  );
 }
 
 export function simulateCluster(
   cluster: Cluster,
-  state: "down" | "up",
-): Promise<{ down: boolean; cluster: Cluster }> {
-  return request<{ down: boolean; cluster: Cluster }>(
-    `${COORDINATOR_API}/simulate/${cluster}/${state}`,
+  status: SimulationStatus,
+): Promise<{ status: SimulationStatus; cluster: Cluster }> {
+  return request<{ status: SimulationStatus; cluster: Cluster }>(
+    `${COORDINATOR_API}/simulation/${cluster}/${status}`,
     {
       method: "POST",
     },

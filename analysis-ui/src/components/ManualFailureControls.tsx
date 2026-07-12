@@ -7,17 +7,17 @@ import {
   Typography,
 } from "@mui/material";
 import { clusters } from "../constants";
-import type { Cluster } from "../types";
+import type { Cluster, SimulationStatus } from "../types";
 
 type ManualFailureControlsProps = {
   busyAction: string;
-  simulationDownByCluster: Record<Cluster, boolean>;
-  onSimulate: (cluster: Cluster, state: "down" | "up") => void;
+  simulationStatusByCluster: Record<Cluster, SimulationStatus>;
+  onSimulate: (cluster: Cluster, status: SimulationStatus) => void;
 };
 
 export function ManualFailureControls({
   busyAction,
-  simulationDownByCluster,
+  simulationStatusByCluster,
   onSimulate,
 }: ManualFailureControlsProps) {
   return (
@@ -32,7 +32,8 @@ export function ManualFailureControls({
 
         <Stack spacing={1}>
           {clusters.map((cluster) => {
-            const isDown = simulationDownByCluster[cluster.key];
+            const status = simulationStatusByCluster[cluster.key];
+            const isDown = status === "down";
             const disabled =
               busyAction === `simulate-${cluster.key}-down` ||
               busyAction === `simulate-${cluster.key}-up`;
@@ -57,7 +58,7 @@ export function ManualFailureControls({
                   <Chip
                     size="small"
                     color={isDown ? "error" : "success"}
-                    label={isDown ? "Down" : "Up"}
+                    label={status === "down" ? "Down" : "Up"}
                     variant={isDown ? "filled" : "outlined"}
                   />
                 </Stack>

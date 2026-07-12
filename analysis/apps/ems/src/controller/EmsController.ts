@@ -1,6 +1,6 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { AnalyzeRequest, SimulationStateService } from "@shared";
+import { AnalyzeRequest, SimulationService } from "@shared";
 import { EmsService } from "../service/EmsService";
 
 @ApiTags("EMS Analysis")
@@ -8,7 +8,7 @@ import { EmsService } from "../service/EmsService";
 export class EmsController {
   constructor(
     private readonly emsService: EmsService,
-    private readonly simulationState: SimulationStateService,
+    private readonly simulationService: SimulationService,
   ) {}
 
   @ApiOperation({ summary: "Collect upstream results and start EMS analysis" })
@@ -21,9 +21,9 @@ export class EmsController {
   @Post("analyze")
   @HttpCode(HttpStatus.ACCEPTED)
   analyze(@Body() body: AnalyzeRequest) {
-    this.simulationState.assertUp();
+    this.simulationService.assertUp();
 
-    this.emsService.collect(body);
+    this.emsService.analyze(body);
 
     return {
       accepted: true,

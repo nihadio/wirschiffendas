@@ -14,6 +14,7 @@ import {
   KafkaClient,
   OptionalEquipmentConfig,
 } from "@shared";
+import type { SimulationStatus } from "@shared";
 import type CircuitBreaker from "opossum";
 import { AlgorithmClient } from "../client/AlgorithmClient";
 import { ConfigClient } from "../client/ConfigClient";
@@ -89,6 +90,17 @@ export class ClusterGateway {
 
     const retriedCluster = cluster as Cluster;
     const config = this.analysisService.getConfig(runId);
+
+    if (retriedCluster === Cluster.EMS) {
+      this.retryEms(runId, config);
+
+      return {
+        accepted: true,
+        runId,
+        cluster: retriedCluster,
+      };
+    }
+
     this.analysisService.resetForRetry(runId, retriedCluster);
     this.analyzeBreakers[retriedCluster].close();
     void this.analyzeBreakers[retriedCluster].fire({ runId, config });
@@ -99,33 +111,67 @@ export class ClusterGateway {
     };
   }
 
-  async simulationStates() {
+  private retryEms(runId: string, config: OptionalEquipmentConfig) {
+    const requests = [Cluster.DRIVETRAIN, Cluster.MECHANICAL].map(
+      (upstreamCluster): AnalyzeRequest => {
+        const upstreamResults = this.analysisService.getClusterResults(
+          runId,
+          upstreamCluster,
+        );
+
+        if (!upstreamResults?.length) {
+          throw new BadRequestException(
+            `Cannot retry EMS without ${upstreamCluster} results.`,
+          );
+        }
+
+        return {
+          runId,
+          config,
+          upstreamCluster,
+          upstreamResults,
+        };
+      },
+    );
+
+    this.analysisService.resetForRetry(runId, Cluster.EMS);
+    this.analyzeBreakers[Cluster.EMS].close();
+
+    requests.forEach((request) => {
+      void this.analyzeBreakers[Cluster.EMS].fire(request);
+    });
+  }
+
+  async simulationStatuses() {
     const entries = await Promise.all(
       Object.values(Cluster).map(async (cluster) => {
         try {
-          const state = await this.simulationClient.getState(cluster);
+          const status = await this.simulationClient.getStatus(cluster);
 
-          return [cluster, state.down] as const;
+          return [cluster, status] as const;
         } catch {
-          return [cluster, true] as const;
+          return [cluster, "down"] as const;
         }
       }),
     );
 
-    return Object.fromEntries(entries) as Record<Cluster, boolean>;
+    return Object.fromEntries(entries) as Record<Cluster, SimulationStatus>;
   }
 
-  async simulate(cluster: string, state: "down" | "up") {
+  async simulate(cluster: string, status: SimulationStatus) {
     if (!Object.values(Cluster).includes(cluster as Cluster)) {
       throw new BadRequestException(`Unknown cluster "${cluster}".`);
     }
 
     const simulatedCluster = cluster as Cluster;
-    const data = await this.simulationClient.setState(simulatedCluster, state);
+    const simulationStatus = await this.simulationClient.setStatus(
+      simulatedCluster,
+      status,
+    );
 
     return {
-      ...data,
       cluster: simulatedCluster,
+      status: simulationStatus,
     };
   }
 

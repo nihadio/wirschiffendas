@@ -4,17 +4,17 @@ import { Cluster } from "@shared";
 import { ClusterGateway } from "../gateway/ClusterGateway";
 
 @ApiTags("Failure Simulation")
-@Controller("simulate")
+@Controller("simulation")
 export class SimulationController {
   constructor(private readonly clusterGateway: ClusterGateway) {}
 
   @ApiOperation({
-    summary: "Current simulation state of all analysis services",
+    summary: "Current simulation status of all analysis services",
   })
-  @ApiResponse({ status: 200, description: "Down flag per cluster" })
-  @Get()
-  states() {
-    return this.clusterGateway.simulationStates();
+  @ApiResponse({ status: 200, description: "Up or down status per cluster" })
+  @Get("statuses")
+  getStatuses() {
+    return this.clusterGateway.simulationStatuses();
   }
 
   @ApiOperation({ summary: "Simulate one analysis service being down" })
