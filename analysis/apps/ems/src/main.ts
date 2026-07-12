@@ -6,7 +6,6 @@ import {
   createKafkaOptions,
   setupGlobalExceptionFilter,
   setupGlobalValidationPipe,
-  setupSwagger,
 } from "@shared";
 
 async function bootstrap() {
@@ -14,7 +13,6 @@ async function bootstrap() {
 
   setupGlobalValidationPipe(app);
   setupGlobalExceptionFilter(app);
-  setupSwagger(app, { title: "EMS" });
 
   app.connectMicroservice<MicroserviceOptions>(createKafkaOptions("ems"));
 

@@ -5,21 +5,7 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
-    "tsConfigPath": "apps/coordinator/tsconfig.app.json",
-    "plugins": [
-      {
-        "name": "@nestjs/swagger",
-        "options": {
-          "dtoFileNameSuffix": [
-            "Dto.ts",
-            "Config.ts"
-          ],
-          "controllerFileNameSuffix": [
-            "Controller.ts"
-          ]
-        }
-      }
-    ]
+    "tsConfigPath": "apps/coordinator/tsconfig.app.json"
   },
   "monorepo": true,
   "root": "apps/coordinator",
@@ -30,21 +16,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/config/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/config/tsconfig.app.json",
-        "plugins": [
-          {
-            "name": "@nestjs/swagger",
-            "options": {
-              "dtoFileNameSuffix": [
-                "Dto.ts",
-                "Config.ts"
-              ],
-              "controllerFileNameSuffix": [
-                "Controller.ts"
-              ]
-            }
-          }
-        ]
+        "tsConfigPath": "apps/config/tsconfig.app.json"
       }
     },
     "coordinator": {
@@ -53,21 +25,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/coordinator/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/coordinator/tsconfig.app.json",
-        "plugins": [
-          {
-            "name": "@nestjs/swagger",
-            "options": {
-              "dtoFileNameSuffix": [
-                "Dto.ts",
-                "Config.ts"
-              ],
-              "controllerFileNameSuffix": [
-                "Controller.ts"
-              ]
-            }
-          }
-        ]
+        "tsConfigPath": "apps/coordinator/tsconfig.app.json"
       }
     },
     "drivetrain": {
@@ -76,21 +34,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/drivetrain/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/drivetrain/tsconfig.app.json",
-        "plugins": [
-          {
-            "name": "@nestjs/swagger",
-            "options": {
-              "dtoFileNameSuffix": [
-                "Dto.ts",
-                "Config.ts"
-              ],
-              "controllerFileNameSuffix": [
-                "Controller.ts"
-              ]
-            }
-          }
-        ]
+        "tsConfigPath": "apps/drivetrain/tsconfig.app.json"
       }
     },
     "ems": {
@@ -99,21 +43,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/ems/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/ems/tsconfig.app.json",
-        "plugins": [
-          {
-            "name": "@nestjs/swagger",
-            "options": {
-              "dtoFileNameSuffix": [
-                "Dto.ts",
-                "Config.ts"
-              ],
-              "controllerFileNameSuffix": [
-                "Controller.ts"
-              ]
-            }
-          }
-        ]
+        "tsConfigPath": "apps/ems/tsconfig.app.json"
       }
     },
     "fluids": {
@@ -122,21 +52,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/fluids/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/fluids/tsconfig.app.json",
-        "plugins": [
-          {
-            "name": "@nestjs/swagger",
-            "options": {
-              "dtoFileNameSuffix": [
-                "Dto.ts",
-                "Config.ts"
-              ],
-              "controllerFileNameSuffix": [
-                "Controller.ts"
-              ]
-            }
-          }
-        ]
+        "tsConfigPath": "apps/fluids/tsconfig.app.json"
       }
     },
     "mechanical": {
@@ -145,21 +61,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/mechanical/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/mechanical/tsconfig.app.json",
-        "plugins": [
-          {
-            "name": "@nestjs/swagger",
-            "options": {
-              "dtoFileNameSuffix": [
-                "Dto.ts",
-                "Config.ts"
-              ],
-              "controllerFileNameSuffix": [
-                "Controller.ts"
-              ]
-            }
-          }
-        ]
+        "tsConfigPath": "apps/mechanical/tsconfig.app.json"
       }
     },
     "shared": {
@@ -168,21 +70,7 @@
       "entryFile": "index",
       "sourceRoot": "libs/shared/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/shared/tsconfig.lib.json",
-        "plugins": [
-          {
-            "name": "@nestjs/swagger",
-            "options": {
-              "dtoFileNameSuffix": [
-                "Dto.ts",
-                "Config.ts"
-              ],
-              "controllerFileNameSuffix": [
-                "Controller.ts"
-              ]
-            }
-          }
-        ]
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
       }
     }
   }

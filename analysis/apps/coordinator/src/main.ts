@@ -5,7 +5,6 @@ import {
   createKafkaOptions,
   setupGlobalExceptionFilter,
   setupGlobalValidationPipe,
-  setupSwagger,
 } from "@shared";
 import { CoordinatorModule } from "./CoordinatorModule";
 
@@ -16,7 +15,6 @@ async function bootstrap() {
 
   setupGlobalValidationPipe(app);
   setupGlobalExceptionFilter(app);
-  setupSwagger(app, { title: "Coordinator" });
 
   app.connectMicroservice<MicroserviceOptions>(
     createKafkaOptions("coordinator"),

@@ -3,7 +3,6 @@ export * from "./messages";
 export * from "./dtos";
 export * from "./kafka";
 export * from "./http";
-export * from "./swagger";
 export * from "./filters";
 export * from "./validation";
 export * from "./circuit-breaker";

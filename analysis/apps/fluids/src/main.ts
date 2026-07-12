@@ -4,7 +4,6 @@ import { FluidsModule } from "./FluidsModule";
 import {
   setupGlobalExceptionFilter,
   setupGlobalValidationPipe,
-  setupSwagger,
 } from "@shared";
 
 async function bootstrap() {
@@ -12,7 +11,6 @@ async function bootstrap() {
 
   setupGlobalValidationPipe(app);
   setupGlobalExceptionFilter(app);
-  setupSwagger(app, { title: "Fluids" });
 
   await app.listen(ENV.port);
 }
