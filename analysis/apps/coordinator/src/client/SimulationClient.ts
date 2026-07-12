@@ -20,6 +20,8 @@ export class SimulationClient {
   setState(cluster: Cluster, state: "down" | "up") {
     return this.httpClient.post<SimulationState>(
       `${ENV.urls[cluster]}/simulate/${state}`,
+      undefined,
+      { timeout: 3_000 },
     );
   }
 }
