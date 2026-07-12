@@ -8,7 +8,8 @@ import {
   Equipment,
   EquipmentResult,
   KafkaClient,
-  StatusMessage,
+  OptionalEquipmentConfig,
+  ResultMessage,
 } from "@shared";
 
 const ANALYSIS_DURATION_MS = 5_000;
@@ -46,14 +47,50 @@ export class EmsService {
     }
 
     run.upstreamByCluster[upstreamCluster] = request.upstreamResults;
+    run.config = request.config;
 
     this.runs.set(request.runId, run);
+    this.startWhenReady(request.runId, run);
+  }
 
-    const hasAllRequiredInputs = this.requiredUpstreamClusters.every(
-      (cluster) => run.upstreamByCluster[cluster] !== undefined,
-    );
+  rememberUpstreamResults(message: ResultMessage) {
+    if (!this.requiredUpstreamClusters.includes(message.cluster)) {
+      return;
+    }
 
-    if (!hasAllRequiredInputs || run.running) {
+    const run = this.runs.get(message.runId) ?? {
+      upstreamByCluster: {},
+    };
+
+    run.upstreamByCluster[message.cluster] = message.results;
+    this.runs.set(message.runId, run);
+  }
+
+  retry(runId: string, config: OptionalEquipmentConfig) {
+    const run = this.runs.get(runId);
+
+    if (!run || !this.hasAllRequiredInputs(run)) {
+      throw new BadRequestException(
+        "Cannot retry EMS without drivetrain and mechanical results.",
+      );
+    }
+
+    if (run.running) {
+      throw new BadRequestException(`EMS run ${runId} is already running.`);
+    }
+
+    run.config = config;
+    run.completed = false;
+    this.startWhenReady(runId, run);
+  }
+
+  private startWhenReady(runId: string, run: EmsRunState) {
+    if (
+      !run.config ||
+      !this.hasAllRequiredInputs(run) ||
+      run.running ||
+      run.completed
+    ) {
       return;
     }
 
@@ -63,31 +100,19 @@ export class EmsService {
       (cluster) => run.upstreamByCluster[cluster] ?? [],
     );
 
-    void this.run(request.runId, upstreamResults).finally(() => {
-      run.running = false;
-    });
+    void this.run(runId, upstreamResults)
+      .then(() => {
+        run.completed = true;
+      })
+      .finally(() => {
+        run.running = false;
+      });
   }
 
-  handleStatusMessage(message: StatusMessage) {
-    if (
-      message.status !== AlgorithmStatus.FAILED ||
-      !this.requiredUpstreamClusters.includes(message.cluster)
-    ) {
-      return;
-    }
-
-    const run = this.runs.get(message.runId) ?? {
-      upstreamByCluster: {},
-    };
-
-    this.runs.set(message.runId, run);
-
-    this.kafkaClient.emitStatus({
-      runId: message.runId,
-      cluster: this.cluster,
-      status: AlgorithmStatus.FAILED,
-      reason: "blocked",
-    });
+  private hasAllRequiredInputs(run: EmsRunState) {
+    return this.requiredUpstreamClusters.every(
+      (cluster) => run.upstreamByCluster[cluster] !== undefined,
+    );
   }
 
   private async run(runId: string, upstreamResults: EquipmentResult[]) {
@@ -126,5 +151,7 @@ export class EmsService {
 
 type EmsRunState = {
   upstreamByCluster: Partial<Record<Cluster, EquipmentResult[]>>;
+  config?: OptionalEquipmentConfig;
   running?: boolean;
+  completed?: boolean;
 };

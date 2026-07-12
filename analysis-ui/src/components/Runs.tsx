@@ -12,7 +12,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tooltip,
   Typography,
   IconButton,
 } from "@mui/material";
@@ -79,19 +78,6 @@ function ClusterCell({
   }
 
   if (state.status === "failed") {
-    if (state.reason === "blocked") {
-      const blockedReason =
-        cluster === "ems"
-          ? "Never reached: drivetrain or mechanical failed. Retry the failed upstream service."
-          : "Never reached: fluids failed, so the chain did not start this service. Retry fluids to re-run everything.";
-
-      return (
-        <Tooltip title={blockedReason}>
-          <Chip size="small" variant="outlined" label="Blocked" />
-        </Tooltip>
-      );
-    }
-
     return (
       <Stack direction="row" spacing={1} alignItems="center">
         <Chip size="small" color="error" label="Failed" />
@@ -111,7 +97,7 @@ function ClusterCell({
 
   return (
     <Typography variant="body2" color="text.secondary">
-      Queued
+      Not started
     </Typography>
   );
 }

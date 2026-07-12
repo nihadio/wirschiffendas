@@ -156,7 +156,6 @@ export function useAnalysisDashboard() {
     setError("");
     setInfo("");
     resetRunCluster(runId, cluster);
-    subscribeToRun(runId);
 
     try {
       await retryCluster(runId, cluster);
@@ -205,11 +204,6 @@ export function useAnalysisDashboard() {
     eventSource.onmessage = (event) => {
       const streamEvent = JSON.parse(event.data) as StreamEvent;
       applyStreamEvent(streamEvent);
-
-      if (streamEvent.type === "overall") {
-        eventSource.close();
-        eventSourcesRef.current.delete(runId);
-      }
     };
 
     eventSource.onerror = () => {
@@ -245,7 +239,6 @@ export function useAnalysisDashboard() {
               [streamEvent.cluster]: {
                 ...currentCluster,
                 status: streamEvent.status,
-                reason: streamEvent.reason,
               },
             },
           };

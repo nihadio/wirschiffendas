@@ -8,6 +8,7 @@ import {
   Equipment,
   EquipmentResult,
   KafkaClient,
+  OptionalEquipmentConfig,
 } from "@shared";
 import { EmsClient } from "../client/EmsClient";
 
@@ -32,6 +33,14 @@ export class MechanicalService {
     assertUpstreamCluster(request, [Cluster.FLUIDS], this.cluster);
 
     return this.run(request);
+  }
+
+  retry(runId: string, config: OptionalEquipmentConfig) {
+    return this.analyze({
+      runId,
+      config,
+      upstreamCluster: Cluster.FLUIDS,
+    });
   }
 
   private async run(request: AnalyzeRequest) {

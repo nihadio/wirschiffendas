@@ -3,7 +3,6 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   Cluster,
-  Equipment,
   EquipmentResult,
   OptionalEquipmentConfig,
   ResultMessage,
@@ -11,32 +10,10 @@ import {
 } from "@shared";
 import { Injectable, NotFoundException } from "@nestjs/common";
 
-const EQUIPMENT_BY_CLUSTER: Record<Cluster, Equipment[]> = {
-  [Cluster.FLUIDS]: [
-    Equipment.OIL_SYSTEM,
-    Equipment.FUEL_SYSTEM,
-    Equipment.COOLING_SYSTEM,
-  ],
-  [Cluster.DRIVETRAIN]: [
-    Equipment.POWER_TRANSMISSION,
-    Equipment.GEARBOX_OPTIONS,
-  ],
-  [Cluster.MECHANICAL]: [
-    Equipment.STARTING_SYSTEM,
-    Equipment.AUXILIARY_PTO,
-    Equipment.MOUNTING_SYSTEM,
-    Equipment.EXHAUST_SYSTEM,
-  ],
-  [Cluster.EMS]: [
-    Equipment.ENGINE_MANAGEMENT_SYSTEM,
-    Equipment.MONITORING_CONTROL_SYSTEM,
-  ],
-};
-
 @Injectable()
 export class AnalysisService {
   private runs = new Map<string, Run>();
-  private readonly resultClusters = Object.values(Cluster);
+  private readonly clusters = Object.values(Cluster);
 
   createRun(runId: string, config: OptionalEquipmentConfig) {
     this.runs.set(runId, {
@@ -52,10 +29,6 @@ export class AnalysisService {
 
   getConfig(runId: string) {
     return this.getRun(runId).config;
-  }
-
-  getClusterResults(runId: string, cluster: Cluster) {
-    return this.getRun(runId).clusters[cluster]?.results;
   }
 
   getClusterStatus(runId: string, cluster: Cluster) {
@@ -95,13 +68,7 @@ export class AnalysisService {
       ...message,
     });
 
-    if (message.status === AlgorithmStatus.FAILED) {
-      this.applyResultMessage({
-        runId: message.runId,
-        cluster: message.cluster,
-        results: this.buildFailedResults(message.cluster),
-      });
-    }
+    this.recalculateOverall(message.runId, run);
   }
 
   applyResultMessage(message: ResultMessage) {
@@ -121,32 +88,45 @@ export class AnalysisService {
       ...message,
     });
 
+    this.recalculateOverall(message.runId, run);
+  }
+
+  private recalculateOverall(runId: string, run: Run) {
     if (run.overallEmitted) {
       return;
     }
 
-    const hasAllResults = this.resultClusters.every(
-      (cluster) => run.clusters[cluster]?.results !== undefined,
+    const hasFailedStatus = this.clusters.some(
+      (cluster) => run.clusters[cluster]?.status === AlgorithmStatus.FAILED,
+    );
+    const hasFailedResult = this.clusters.some((cluster) =>
+      run.clusters[cluster]?.results?.some(
+        (result) => result.result === AnalysisResult.FAILED,
+      ),
     );
 
-    if (!hasAllResults) {
+    if (hasFailedStatus || hasFailedResult) {
+      this.emitOverall(runId, run, AnalysisResult.FAILED);
       return;
     }
 
-    const allResults = this.resultClusters.flatMap(
-      (cluster) => run.clusters[cluster]?.results ?? [],
+    const allReady = this.clusters.every(
+      (cluster) => run.clusters[cluster]?.status === AlgorithmStatus.READY,
+    );
+    const hasAllResults = this.clusters.every(
+      (cluster) => run.clusters[cluster]?.results !== undefined,
     );
 
-    const overall = allResults.some(
-      (result) => result.result === AnalysisResult.FAILED,
-    )
-      ? AnalysisResult.FAILED
-      : AnalysisResult.OK;
+    if (allReady && hasAllResults) {
+      this.emitOverall(runId, run, AnalysisResult.OK);
+    }
+  }
 
+  private emitOverall(runId: string, run: Run, overall: AnalysisResult) {
     run.overallEmitted = true;
     run.subject.next({
       type: "overall",
-      runId: message.runId,
+      runId,
       overall,
     });
   }
@@ -159,13 +139,6 @@ export class AnalysisService {
     }
 
     return run;
-  }
-
-  private buildFailedResults(cluster: Cluster): EquipmentResult[] {
-    return EQUIPMENT_BY_CLUSTER[cluster].map((equipment) => ({
-      equipment,
-      result: AnalysisResult.FAILED,
-    }));
   }
 }
 

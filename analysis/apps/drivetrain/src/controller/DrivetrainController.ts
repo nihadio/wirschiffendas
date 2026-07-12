@@ -1,5 +1,12 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from "@nestjs/common";
-import { AnalyzeRequest, SimulationService } from "@shared";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+} from "@nestjs/common";
+import { AnalyzeRequest, RetryRequest, SimulationService } from "@shared";
 import { DrivetrainService } from "../service/DrivetrainService";
 
 @Controller()
@@ -19,6 +26,19 @@ export class DrivetrainController {
     return {
       accepted: true,
       runId: body.runId,
+    };
+  }
+
+  @Post("retry/:runId")
+  @HttpCode(HttpStatus.ACCEPTED)
+  retry(@Param("runId") runId: string, @Body() body: RetryRequest) {
+    this.simulationService.assertUp();
+
+    void this.drivetrainService.retry(runId, body.config);
+
+    return {
+      accepted: true,
+      runId,
     };
   }
 }
