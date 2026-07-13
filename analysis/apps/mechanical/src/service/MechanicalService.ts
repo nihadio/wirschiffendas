@@ -12,7 +12,7 @@ import {
 } from "@shared";
 import { EmsClient } from "../client/EmsClient";
 
-const ANALYSIS_DURATION_MS = 5_000;
+const ANALYSIS_DURATION_MS = 6_000;
 
 @Injectable()
 export class MechanicalService {

@@ -12,7 +12,7 @@ import {
   StatusMessage,
 } from "@shared";
 
-const ANALYSIS_DURATION_MS = 5_000;
+const ANALYSIS_DURATION_MS = 10_000;
 
 @Injectable()
 export class EmsService {
