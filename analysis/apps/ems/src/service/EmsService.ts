@@ -3,11 +3,13 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
-  assertUpstreamCluster,
   Cluster,
   Equipment,
   EquipmentResult,
   KafkaClient,
+  RetryMessage,
+  SimulationService,
+  StatusMessage,
 } from "@shared";
 
 const ANALYSIS_DURATION_MS = 5_000;
@@ -19,72 +21,116 @@ export class EmsService {
     Equipment.ENGINE_MANAGEMENT_SYSTEM,
     Equipment.MONITORING_CONTROL_SYSTEM,
   ];
-
-  private readonly runs = new Map<string, EmsRunState>();
-
-  private readonly requiredUpstreamClusters: readonly [Cluster, Cluster] = [
+  private readonly requiredUpstreams: readonly EmsUpstreamCluster[] = [
     Cluster.DRIVETRAIN,
     Cluster.MECHANICAL,
   ];
+  private readonly runs = new Map<string, EmsRunState>();
 
-  constructor(private kafkaClient: KafkaClient) {}
+  constructor(
+    private kafkaClient: KafkaClient,
+    private simulationService: SimulationService,
+  ) {}
 
   analyze(request: AnalyzeRequest) {
-    const upstreamCluster = assertUpstreamCluster(
-      request,
-      this.requiredUpstreamClusters,
-      this.cluster,
-    );
-
-    const run = this.runs.get(request.runId) ?? {
-      upstreamByCluster: {},
-    };
-
-    if (!request.upstreamResults?.length) {
-      throw new BadRequestException("EMS requires upstreamResults.");
+    if (!isEmsUpstreamCluster(request.source)) {
+      throw new BadRequestException(
+        "EMS requires source from drivetrain or mechanical.",
+      );
     }
 
-    run.upstreamByCluster[upstreamCluster] = request.upstreamResults;
+    const run = this.getRun(request.runId);
+    run.readyUpstreams.add(request.source);
+    this.startIfReady(request.runId, run);
+  }
 
-    this.runs.set(request.runId, run);
-
-    const hasAllRequiredInputs = this.requiredUpstreamClusters.every(
-      (cluster) => run.upstreamByCluster[cluster] !== undefined,
-    );
-
-    if (!hasAllRequiredInputs || run.running) {
+  handleStatusMessage(message: StatusMessage) {
+    if (!isEmsUpstreamCluster(message.cluster)) {
       return;
     }
 
-    run.running = true;
+    const run = this.getRun(message.runId);
 
-    const upstreamResults = this.requiredUpstreamClusters.flatMap(
-      (cluster) => run.upstreamByCluster[cluster] ?? [],
-    );
+    if (message.status === AlgorithmStatus.READY) {
+      run.readyUpstreams.add(message.cluster);
+      return;
+    }
 
-    void this.run(request.runId, upstreamResults).finally(() => {
-      run.running = false;
-    });
+    if (message.status === AlgorithmStatus.FAILED) {
+      this.invalidate(run);
+      run.readyUpstreams.delete(message.cluster);
+      this.emitFailed(message.runId);
+    }
   }
 
-  private async run(runId: string, upstreamResults: EquipmentResult[]) {
+  handleRetry(message: RetryMessage) {
+    if (message.cluster === Cluster.FLUIDS) {
+      this.resetRun(message.runId);
+      return;
+    }
+
+    if (isEmsUpstreamCluster(message.cluster)) {
+      const run = this.getRun(message.runId);
+      this.invalidate(run);
+      run.readyUpstreams.delete(message.cluster);
+      return;
+    }
+
+    if (message.cluster !== Cluster.EMS) {
+      return;
+    }
+
+    try {
+      this.simulationService.assertUp();
+    } catch {
+      this.emitFailed(message.runId);
+      return;
+    }
+
+    const run = this.getRun(message.runId);
+    run.completed = false;
+
+    if (!this.startIfReady(message.runId, run)) {
+      this.emitFailed(message.runId);
+    }
+  }
+
+  private startIfReady(runId: string, run: EmsRunState) {
+    if (run.running || run.completed || !this.hasAllUpstreams(run)) {
+      return false;
+    }
+
+    const version = run.version;
+    run.running = true;
+
+    void this.run(runId, run, version).then((completed) => {
+      if (run.version !== version) {
+        return;
+      }
+
+      run.running = false;
+      run.completed = completed;
+    });
+
+    return true;
+  }
+
+  private async run(runId: string, run: EmsRunState, version: number) {
     this.kafkaClient.emitStatus({
       runId,
       cluster: this.cluster,
       status: AlgorithmStatus.RUNNING,
     });
 
-    await new Promise((r) => setTimeout(r, ANALYSIS_DURATION_MS));
+    await new Promise((resolve) => setTimeout(resolve, ANALYSIS_DURATION_MS));
 
-    const dependent = upstreamResults.some(
-      (result) => result.result === AnalysisResult.FAILED,
-    )
-      ? AnalysisResult.FAILED
-      : AnalysisResult.OK;
+    if (run.version !== version) {
+      return false;
+    }
 
     const results: EquipmentResult[] = this.equipments.map((equipment) => ({
       equipment,
-      result: dependent,
+      result: AnalysisResult.OK,
     }));
 
     this.kafkaClient.emitResult({
@@ -98,10 +144,65 @@ export class EmsService {
       cluster: this.cluster,
       status: AlgorithmStatus.READY,
     });
+
+    return true;
+  }
+
+  private hasAllUpstreams(run: EmsRunState) {
+    return this.requiredUpstreams.every((cluster) =>
+      run.readyUpstreams.has(cluster),
+    );
+  }
+
+  private getRun(runId: string) {
+    const run = this.runs.get(runId) ?? createRunState();
+    this.runs.set(runId, run);
+    return run;
+  }
+
+  private resetRun(runId: string) {
+    const run = this.runs.get(runId);
+
+    if (run) {
+      this.invalidate(run);
+    }
+
+    this.runs.set(runId, createRunState());
+  }
+
+  private invalidate(run: EmsRunState) {
+    run.version += 1;
+    run.running = false;
+    run.completed = false;
+  }
+
+  private emitFailed(runId: string) {
+    this.kafkaClient.emitStatus({
+      runId,
+      cluster: this.cluster,
+      status: AlgorithmStatus.FAILED,
+    });
   }
 }
 
+type EmsUpstreamCluster = NonNullable<AnalyzeRequest["source"]>;
+
+function isEmsUpstreamCluster(
+  cluster: Cluster | undefined,
+): cluster is EmsUpstreamCluster {
+  return cluster === Cluster.DRIVETRAIN || cluster === Cluster.MECHANICAL;
+}
+
+function createRunState(): EmsRunState {
+  return {
+    readyUpstreams: new Set<EmsUpstreamCluster>(),
+    version: 0,
+  };
+}
+
 type EmsRunState = {
-  upstreamByCluster: Partial<Record<Cluster, EquipmentResult[]>>;
+  readyUpstreams: Set<EmsUpstreamCluster>;
+  version: number;
   running?: boolean;
+  completed?: boolean;
 };

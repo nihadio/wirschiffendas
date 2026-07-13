@@ -49,14 +49,13 @@ export class ClusterGateway {
       "coordinator->fluids",
       (request: AnalyzeRequest) =>
         this.algorithmClient.analyze(Cluster.FLUIDS, request),
-      (request: AnalyzeRequest) =>
-        this.applyFailure(request.runId, Cluster.FLUIDS),
+      (request: AnalyzeRequest) => this.failFluidsChain(request),
     );
   }
 
-  async getConfig(configId: string) {
+  async assertConfigExists(configId: string) {
     try {
-      return await this.configBreaker.fire(configId);
+      await this.configBreaker.fire(configId);
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 404) {
         throw new NotFoundException(`Config ${configId} not found`);
@@ -76,61 +75,18 @@ export class ClusterGateway {
     }
 
     const retriedCluster = cluster as Cluster;
-    const config = this.analysisService.getConfig(runId);
 
-    // A failed service in this simulation was simply down, so it holds no state
-    // to replay. The coordinator's projection is the run's record, so every
-    // retry is re-injected from here.
-    if (retriedCluster === Cluster.EMS) {
-      // Build EMS input before mutating state so a missing upstream 400s cleanly.
-      const requests = this.buildEmsRetryRequests(runId, config);
-      this.analysisService.resetForRetry(runId, Cluster.EMS);
-      requests.forEach((request) => {
-        void this.algorithmClient
-          .analyze(Cluster.EMS, request)
-          .catch(() => this.applyFailure(runId, Cluster.EMS));
-      });
-    } else if (retriedCluster === Cluster.FLUIDS) {
-      this.analysisService.resetForRetry(runId, Cluster.FLUIDS);
-      this.fluidsBreaker.close();
-      void this.fluidsBreaker.fire({ runId, config });
-    } else {
-      // Drivetrain/mechanical only need the anchor marker + config.
-      this.analysisService.resetForRetry(runId, retriedCluster);
-      void this.algorithmClient
-        .analyze(retriedCluster, {
-          runId,
-          config,
-          upstreamCluster: Cluster.FLUIDS,
-        })
-        .catch(() => this.applyFailure(runId, retriedCluster));
-    }
+    this.analysisService.resetProjectionForRetry(runId, retriedCluster);
+    this.kafkaClient.emitRetry({
+      runId,
+      cluster: retriedCluster,
+    });
 
     return {
       accepted: true,
       runId,
       cluster: retriedCluster,
     };
-  }
-
-  private buildEmsRetryRequests(
-    runId: string,
-    config: OptionalEquipmentConfig,
-  ): AnalyzeRequest[] {
-    return [Cluster.DRIVETRAIN, Cluster.MECHANICAL].map((upstreamCluster) => {
-      const upstreamResults = this.analysisService.getClusterResults(
-        runId,
-        upstreamCluster,
-      );
-
-      if (!upstreamResults?.length) {
-        throw new BadRequestException(
-          `Cannot retry EMS without ${upstreamCluster} results. Retry it first.`,
-        );
-      }
-
-      return { runId, config, upstreamCluster, upstreamResults };
-    });
   }
 
   async simulationStatuses() {
@@ -164,6 +120,12 @@ export class ClusterGateway {
       cluster: simulatedCluster,
       status: simulationStatus,
     };
+  }
+
+  private failFluidsChain(request: AnalyzeRequest) {
+    this.applyFailure(request.runId, Cluster.FLUIDS);
+    this.applyFailure(request.runId, Cluster.DRIVETRAIN);
+    this.applyFailure(request.runId, Cluster.MECHANICAL);
   }
 
   private applyFailure(runId: string, cluster: Cluster) {

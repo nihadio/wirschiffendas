@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
 import { EmsClient } from "./client/EmsClient";
 import { DrivetrainController } from "./controller/DrivetrainController";
+import { EventController } from "./controller/EventController";
 import { DrivetrainService } from "./service/DrivetrainService";
 import {
   createKafkaClientProvider,
@@ -14,7 +15,7 @@ import { ClientsModule } from "@nestjs/microservices";
 
 @Module({
   imports: [ClientsModule.register([createKafkaClientProvider()]), HttpModule],
-  controllers: [DrivetrainController, SimulationController],
+  controllers: [DrivetrainController, EventController, SimulationController],
   providers: [
     DrivetrainService,
     EmsClient,

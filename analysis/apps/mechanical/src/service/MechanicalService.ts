@@ -3,11 +3,12 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
-  assertUpstreamCluster,
   Cluster,
   Equipment,
   EquipmentResult,
   KafkaClient,
+  RetryMessage,
+  SimulationService,
 } from "@shared";
 import { EmsClient } from "../client/EmsClient";
 
@@ -26,12 +27,27 @@ export class MechanicalService {
   constructor(
     private kafkaClient: KafkaClient,
     private emsClient: EmsClient,
+    private simulationService: SimulationService,
   ) {}
 
   analyze(request: AnalyzeRequest) {
-    assertUpstreamCluster(request, [Cluster.FLUIDS], this.cluster);
-
     return this.run(request);
+  }
+
+  retry(message: RetryMessage) {
+    try {
+      this.simulationService.assertUp();
+    } catch {
+      this.kafkaClient.emitStatus({
+        runId: message.runId,
+        cluster: this.cluster,
+        status: AlgorithmStatus.FAILED,
+      });
+
+      return;
+    }
+
+    void this.analyze({ runId: message.runId });
   }
 
   private async run(request: AnalyzeRequest) {
@@ -64,9 +80,7 @@ export class MechanicalService {
 
     void this.emsClient.analyze({
       runId: request.runId,
-      config: request.config,
-      upstreamCluster: this.cluster,
-      upstreamResults: results,
+      source: this.cluster,
     });
   }
 }

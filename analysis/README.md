@@ -91,14 +91,17 @@ export interface OptionalEquipmentConfig {
 }
 export interface AnalyzeRequest {
   runId: string;
-  config: OptionalEquipmentConfig;
-  upstreamResults?: EquipmentResult[]; // заполняется ТОЛЬКО для EMS
+  source?: Cluster.DRIVETRAIN | Cluster.MECHANICAL;
 }
 ```
 
 `constants/index.ts` — имена топиков в одном месте:
 ```ts
-export const TOPICS = { STATUS: 'analysis-status', RESULT: 'analysis-result' } as const;
+export const TOPICS = {
+  STATUS: 'analysis-status',
+  RESULT: 'analysis-result',
+  RETRY: 'analysis-retry',
+} as const;
 ```
 
 `index.ts` — реэкспорт всего:
@@ -324,7 +327,7 @@ docker compose exec kafka kafka-console-consumer.sh --bootstrap-server localhost
 
 # терминал B — дёрни Fluids:
 curl -X POST localhost:3002/analyze -H "Content-Type: application/json" \
-  -d '{"runId":"test-1","config":{"equipment":{}},"upstreamResults":[]}'
+  -d '{"runId":"test-1"}'
 # → сразу 202
 ```
 - В терминале A **сразу** появляется `{... status:"running"}`, через ~20с — `result` + `{... status:"ready"}`. Значит сервис работает и проактивно шлёт в Kafka.
@@ -333,7 +336,7 @@ curl -X POST localhost:3002/analyze -H "Content-Type: application/json" \
 
 ## Фаза 3 — Coordinator + SSE (сквозной поток до клиента)
 
-**Что строим:** сервис-вход. `POST /analysis/start` (с `configId`) → достаёт конфиг из Config-Service → заводит `runId` → запускает якорь (Fluids) → **слушает Kafka** → **стримит события живьём** клиенту через SSE. Здесь всё впервые соединяется в одну цепочку.
+**Что строим:** сервис-вход. `POST /analysis/start` (с `configId`) → проверяет конфиг в Config-Service → заводит `runId` → запускает якорь (Fluids) → **слушает Kafka** → **стримит события живьём** клиенту через SSE. Здесь всё впервые соединяется в одну цепочку.
 
 **Что уже есть:** Config-Service (ф.1), Fluids шлёт в Kafka (ф.2).
 
@@ -410,13 +413,13 @@ export class AnalysisController {
   @Post('start')
   async start(@Body() body: { configId: string }) {
     const cfgUrl = process.env.CONFIG_URL ?? 'http://localhost:3001';
-    const { data: config } = await firstValueFrom(this.http.get(`${cfgUrl}/configs/${body.configId}`));
+    await firstValueFrom(this.http.get(`${cfgUrl}/configs/${body.configId}`));
     const runId = randomUUID();
     this.state.createRun(runId);
     const fluids = process.env.FLUIDS_URL ?? 'http://localhost:3002';
     // запустить якорь (fire-and-forget); Circuit Breaker — в фазе 5
     void firstValueFrom(this.http.post(`${fluids}/analyze`,
-      { runId, config, upstreamResults: [] } as AnalyzeRequest));
+      { runId } as AnalyzeRequest));
     return { runId };
   }
 
@@ -473,7 +476,7 @@ async run(request: AnalyzeRequest) {
   // ↓ хореография: Fluids запускает следующих (вместо заглушки из фазы 2)
   const drivetrain = process.env.DRIVETRAIN_URL ?? 'http://localhost:3003';
   const mechanical = process.env.MECHANICAL_URL ?? 'http://localhost:3004';
-  const next = { runId: request.runId, config: request.config }; // ТОТ ЖЕ runId!
+  const next = { runId: request.runId }; // ТОТ ЖЕ runId!
   void firstValueFrom(this.http.post(`${drivetrain}/analyze`, next)); // fire-and-forget
   void firstValueFrom(this.http.post(`${mechanical}/analyze`, next)); // два подряд = параллельно
 }
@@ -481,43 +484,39 @@ async run(request: AnalyzeRequest) {
 Ключевое: передаём **тот же `runId`** — чтобы все события шли под одним прогоном и Coordinator собрал их вместе. `void firstValueFrom(...)` = «отправь POST и не жди 20с». Это и есть хореография: Fluids **сам** решает позвать следующих, без центрального дирижёра.
 > Предусловие: в `FluidsModule` импортируй `HttpModule` (`@nestjs/axios`), в конструктор `FluidsService` добавь `private http: HttpService`. До фазы 4 это было не нужно — Fluids никого не звал.
 
-**4.3.** В **Drivetrain и Mechanical** — в конце `run()`, после `READY`, каждый зовёт EMS, передавая **свои** результаты как `upstreamResults`:
+**4.3.** В **Drivetrain и Mechanical** — в конце `run()`, после `READY`, каждый зовёт EMS, передавая сигнал об успешном завершении:
 ```ts
 const ems = process.env.EMS_URL ?? 'http://localhost:3005';
 void firstValueFrom(this.http.post(`${ems}/analyze`,
-  { runId: req.runId, config: req.config, upstreamResults: results }));
+  { runId: req.runId, source: this.cluster } as AnalyzeRequest));
 ```
 
-**4.4.** Создай **EMS** (3005) — он зависимый, поэтому ждёт **двух** вызовов (от Drivetrain и Mechanical), собирает их `upstreamResults`, и только тогда стартует:
+**4.4.** Создай **EMS** (3005) — он зависимый, поэтому ждёт **двух** успешных сигналов (от Drivetrain и Mechanical) и только тогда стартует:
 ```ts
 @Injectable()
 export class EmsService implements OnModuleInit {
   private readonly cluster = Cluster.EMS;
-  private acc = new Map<string, { count: number; upstream: EquipmentResult[] }>();
-  private readonly NEED = 2; // ждём Drivetrain + Mechanical
+  private acc = new Map<string, Set<Cluster>>();
   constructor(@Inject('KAFKA') private kafka: ClientKafka) {}
   async onModuleInit() { await this.kafka.connect(); }
 
   // вызывается и Drivetrain, и Mechanical
   async collect(req: AnalyzeRequest) {
-    const cur = this.acc.get(req.runId) ?? { count: 0, upstream: [] };
-    cur.count += 1;
-    cur.upstream.push(...(req.upstreamResults ?? []));
+    if (!req.source) throw new Error('EMS requires source');
+    const cur = this.acc.get(req.runId) ?? new Set<Cluster>();
+    cur.add(req.source);
     this.acc.set(req.runId, cur);
-    if (cur.count >= this.NEED) {            // пришли оба — стартуем
+    if (cur.has(Cluster.DRIVETRAIN) && cur.has(Cluster.MECHANICAL)) {
       this.acc.delete(req.runId);
-      await this.run(req.runId, cur.upstream);
+      await this.run(req.runId);
     }
   }
-  private async run(runId: string, upstream: EquipmentResult[]) {
+  private async run(runId: string) {
     this.kafka.emit(TOPICS.STATUS, { runId, cluster: this.cluster, status: AlgorithmStatus.RUNNING });
     await new Promise((r) => setTimeout(r, 20_000));
-    // ИСПОЛЬЗУЕТ upstream: например failed, если среди предыдущих есть failed
-    const dependent = upstream.some((r) => r.result === AnalysisResult.FAILED)
-      ? AnalysisResult.FAILED : AnalysisResult.OK;
     const results: EquipmentResult[] = [
-      { equipment: 'engineManagementSystem', result: dependent },
-      { equipment: 'monitoringControlSystem', result: dependent },
+      { equipment: 'engineManagementSystem', result: AnalysisResult.OK },
+      { equipment: 'monitoringControlSystem', result: AnalysisResult.OK },
     ];
     this.kafka.emit(TOPICS.RESULT, { runId, cluster: this.cluster, results });
     this.kafka.emit(TOPICS.STATUS, { runId, cluster: this.cluster, status: AlgorithmStatus.READY });
@@ -597,20 +596,24 @@ private down = false;
 ```
 (Либо просто `docker stop <service>` в фазе 7 — тоже валит сервис.)
 
-**5.4.** Retry в Coordinator — `analysis.controller.ts`:
+**5.4.** Coordinator принимает retry от UI и публикует одну команду в Kafka:
 ```ts
 @Post(':runId/retry/:cluster')
 retry(@Param('runId') runId: string, @Param('cluster') cluster: string) {
-  // повторно позвать сервис этого кластера (тем же runId и config из состояния прогона;
-  // для EMS — с сохранённым upstream). Вызов — через тот же Circuit Breaker.
-  return this.state.retryCluster(runId, cluster);
+  this.state.resetProjectionForRetry(runId, cluster);
+  this.kafka.emit(TOPICS.RETRY, { runId, cluster });
+  return { accepted: true, runId, cluster };
 }
 ```
+
+Каждый алгоритмический сервис слушает `analysis-retry`, отбрасывает команды
+для других кластеров и самостоятельно выполняет свой retry. Coordinator не знает,
+как именно повторно запускаются Fluids, Drivetrain, Mechanical или EMS.
 
 ---
 **Проверка — фаза 5 закрыта, если:**
 - Сломай Mechanical: `curl -X POST localhost:3004/simulate/down` (или `docker stop`).
-- Запусти анализ → в SSE: `fluids` ok, `drivetrain` ok, `mechanical` **failed** (через fallback, **без зависания**), `ems` всё равно отрабатывает, `overall` = failed. Ключевое: система **не замерла** на упавшем сервисе.
+- Запусти анализ → в SSE: `fluids` ok, `drivetrain` ok, `mechanical` **failed** (через fallback, **без зависания**), `ems` = failed, `overall` = failed. Ключевое: система **не замерла** на упавшем сервисе.
 - Оживи Mechanical → `curl -X POST localhost:3000/analysis/<runId>/retry/mechanical` → он перезапускается и даёт результат.
 
 ---

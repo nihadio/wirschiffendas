@@ -6,7 +6,9 @@ import { ENV } from "../environment";
 export class AlgorithmClient {
   constructor(private httpClient: HttpClient) {}
 
-  analyze(cluster: Cluster, request: AnalyzeRequest) {
+  analyze(cluster: AnalysisCluster, request: AnalyzeRequest) {
     return this.httpClient.post(`${ENV.urls[cluster]}/analyze`, request);
   }
 }
+
+type AnalysisCluster = Exclude<Cluster, Cluster.EMS>;

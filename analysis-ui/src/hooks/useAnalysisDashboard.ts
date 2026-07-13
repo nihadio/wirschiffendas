@@ -207,26 +207,11 @@ export function useAnalysisDashboard() {
 
     const eventSource = createEventSource(runId);
 
-    const statusByCluster = new Map<string, string>();
-
     eventSource.onmessage = (event) => {
       const streamEvent = JSON.parse(event.data) as StreamEvent;
       applyStreamEvent(streamEvent);
 
-      if (streamEvent.type === "status") {
-        statusByCluster.set(streamEvent.cluster, streamEvent.status);
-      }
-
-      // Close only once every cluster has settled (ready/failed). A downed
-      // service reports "failed" via its caller's circuit-breaker fallback
-      // without ever passing through "running", so "no cluster running" is not
-      // a safe completion signal — wait for a terminal status from each.
-      const allSettled = clusters.every(({ key }) => {
-        const status = statusByCluster.get(key);
-        return status === "ready" || status === "failed";
-      });
-
-      if (allSettled) {
+      if (streamEvent.type === "overall") {
         eventSource.close();
         eventSourcesRef.current.delete(runId);
       }

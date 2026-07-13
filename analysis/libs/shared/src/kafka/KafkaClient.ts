@@ -1,6 +1,7 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import { ClientKafka } from "@nestjs/microservices";
 import type { ResultMessage } from "../messages/ResultMessage";
+import type { RetryMessage } from "../messages/RetryMessage";
 import type { StatusMessage } from "../messages/StatusMessage";
 import { KafkaTopics } from "./KafkaTopics";
 
@@ -18,5 +19,9 @@ export class KafkaClient implements OnModuleInit {
 
   emitResult(message: ResultMessage) {
     return this.clientKafka.emit(KafkaTopics.RESULT, message);
+  }
+
+  emitRetry(message: RetryMessage) {
+    return this.clientKafka.emit(KafkaTopics.RETRY, message);
   }
 }

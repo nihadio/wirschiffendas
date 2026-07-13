@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Body, Controller, Param, Post, Sse } from "@nestjs/common";
-import { AnalyzeRequest, StartAnalysisRequest } from "@shared";
+import { StartAnalysisRequest } from "@shared";
 import { map, Observable } from "rxjs";
 import { ClusterGateway } from "../gateway/ClusterGateway";
 import { AnalysisService } from "../service/AnalysisService";
@@ -14,13 +14,11 @@ export class AnalysisController {
 
   @Post("start")
   async start(@Body() body: StartAnalysisRequest) {
-    const config = await this.clusterGateway.getConfig(body.configId);
+    await this.clusterGateway.assertConfigExists(body.configId);
 
     const runId = randomUUID();
-    this.analysisService.createRun(runId, config);
-
-    const request: AnalyzeRequest = { runId, config };
-    this.clusterGateway.startFluids(request);
+    this.analysisService.createRun(runId);
+    this.clusterGateway.startFluids({ runId });
 
     return { runId };
   }

@@ -4,22 +4,27 @@ import {
   AnalysisResult,
   Cluster,
   EquipmentResult,
-  OptionalEquipmentConfig,
   ResultMessage,
   StatusMessage,
 } from "@shared";
 import { Injectable, NotFoundException } from "@nestjs/common";
+
+const RETRY_PROJECTION_SCOPE: Record<Cluster, readonly Cluster[]> = {
+  [Cluster.FLUIDS]: Object.values(Cluster),
+  [Cluster.DRIVETRAIN]: [Cluster.DRIVETRAIN, Cluster.EMS],
+  [Cluster.MECHANICAL]: [Cluster.MECHANICAL, Cluster.EMS],
+  [Cluster.EMS]: [Cluster.EMS],
+};
 
 @Injectable()
 export class AnalysisService {
   private runs = new Map<string, Run>();
   private readonly clusters = Object.values(Cluster);
 
-  createRun(runId: string, config: OptionalEquipmentConfig) {
+  createRun(runId: string) {
     this.runs.set(runId, {
       subject: new ReplaySubject(50),
       clusters: {},
-      config,
     });
   }
 
@@ -27,29 +32,11 @@ export class AnalysisService {
     return this.getRun(runId).subject.asObservable();
   }
 
-  getConfig(runId: string) {
-    return this.getRun(runId).config;
-  }
-
-  getClusterResults(runId: string, cluster: Cluster) {
-    return this.getRun(runId).clusters[cluster]?.results;
-  }
-
-  getClusterStatus(runId: string, cluster: Cluster) {
-    return this.getRun(runId).clusters[cluster]?.status;
-  }
-
-  resetForRetry(runId: string, cluster: Cluster) {
+  resetProjectionForRetry(runId: string, cluster: Cluster) {
     const run = this.getRun(runId);
 
-    if (cluster === Cluster.FLUIDS) {
-      run.clusters = {};
-    } else {
-      delete run.clusters[cluster];
-
-      if (cluster !== Cluster.EMS) {
-        delete run.clusters[Cluster.EMS];
-      }
+    for (const affectedCluster of RETRY_PROJECTION_SCOPE[cluster]) {
+      delete run.clusters[affectedCluster];
     }
 
     run.overallEmitted = false;
@@ -133,14 +120,19 @@ export class AnalysisService {
       (cluster) => run.clusters[cluster]?.status,
     );
 
-    if (statuses.some((status) => status === AlgorithmStatus.FAILED)) {
-      this.emitOverall(runId, run, AnalysisResult.FAILED);
+    const hasPendingCluster = statuses.some(
+      (status) => status === undefined || status === AlgorithmStatus.RUNNING,
+    );
+
+    if (hasPendingCluster) {
       return;
     }
 
-    if (statuses.every((status) => status === AlgorithmStatus.READY)) {
-      this.emitOverall(runId, run, AnalysisResult.OK);
-    }
+    const overall = statuses.some((status) => status === AlgorithmStatus.FAILED)
+      ? AnalysisResult.FAILED
+      : AnalysisResult.OK;
+
+    this.emitOverall(runId, run, overall);
   }
 
   private emitOverall(runId: string, run: Run, overall: AnalysisResult) {
@@ -173,6 +165,5 @@ type Run = {
   clusters: Partial<
     Record<Cluster, { status?: AlgorithmStatus; results?: EquipmentResult[] }>
   >;
-  config: OptionalEquipmentConfig;
   overallEmitted?: boolean;
 };

@@ -3,11 +3,12 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   AnalyzeRequest,
-  assertUpstreamCluster,
   Cluster,
   Equipment,
   EquipmentResult,
   KafkaClient,
+  RetryMessage,
+  SimulationService,
 } from "@shared";
 import { DrivetrainClient } from "../client/DrivetrainClient";
 import { MechanicalClient } from "../client/MechanicalClient";
@@ -27,12 +28,22 @@ export class FluidsService {
     private kafkaClient: KafkaClient,
     private drivetrainClient: DrivetrainClient,
     private mechanicalClient: MechanicalClient,
+    private simulationService: SimulationService,
   ) {}
 
   analyze(request: AnalyzeRequest) {
-    assertUpstreamCluster(request, [], this.cluster);
-
     return this.run(request);
+  }
+
+  retry(message: RetryMessage) {
+    try {
+      this.simulationService.assertUp();
+    } catch {
+      this.emitFailedChain(message.runId);
+      return;
+    }
+
+    void this.analyze({ runId: message.runId });
   }
 
   private async run(request: AnalyzeRequest) {
@@ -63,13 +74,21 @@ export class FluidsService {
       status: AlgorithmStatus.READY,
     });
 
-    const nextAnalyzeRequest = {
-      runId: request.runId,
-      config: request.config,
-      upstreamCluster: this.cluster,
-    };
+    const nextAnalyzeRequest = { runId: request.runId };
 
     void this.drivetrainClient.analyze(nextAnalyzeRequest);
     void this.mechanicalClient.analyze(nextAnalyzeRequest);
+  }
+
+  private emitFailedChain(runId: string) {
+    [Cluster.FLUIDS, Cluster.DRIVETRAIN, Cluster.MECHANICAL].forEach(
+      (cluster) => {
+        this.kafkaClient.emitStatus({
+          runId,
+          cluster,
+          status: AlgorithmStatus.FAILED,
+        });
+      },
+    );
   }
 }
