@@ -9,7 +9,7 @@ export class Config {
   @Column()
   engineModel!: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   cylinderVariant!: CylinderVariant;
 
   @Column()

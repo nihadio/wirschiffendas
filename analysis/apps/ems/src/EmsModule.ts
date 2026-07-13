@@ -7,12 +7,11 @@ import {
   SimulationService,
 } from "@shared";
 import { EmsController } from "./controller/EmsController";
-import { EventController } from "./controller/EventController";
 import { EmsService } from "./service/EmsService";
 
 @Module({
   imports: [ClientsModule.register([createKafkaClientProvider()])],
-  controllers: [EmsController, EventController, SimulationController],
+  controllers: [EmsController, SimulationController],
   providers: [EmsService, KafkaClient, SimulationService],
 })
 export class EmsModule {}

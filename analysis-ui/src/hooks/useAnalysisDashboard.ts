@@ -156,10 +156,10 @@ export function useAnalysisDashboard() {
     setError("");
     setInfo("");
     resetRunCluster(runId, cluster);
-    subscribeToRun(runId);
 
     try {
       await retryCluster(runId, cluster);
+      subscribeToRun(runId);
       setInfo(`${clusterLabel(cluster)} retry accepted`);
     } catch (err) {
       setError(
@@ -196,17 +196,37 @@ export function useAnalysisDashboard() {
   }
 
   function subscribeToRun(runId: string) {
-    if (eventSourcesRef.current.has(runId)) {
-      return;
+    // Tear down any existing stream first so a retry reconnects to the run's
+    // fresh subject instead of silently reusing the stale connection.
+    const existing = eventSourcesRef.current.get(runId);
+
+    if (existing) {
+      existing.close();
+      eventSourcesRef.current.delete(runId);
     }
 
     const eventSource = createEventSource(runId);
+
+    const statusByCluster = new Map<string, string>();
 
     eventSource.onmessage = (event) => {
       const streamEvent = JSON.parse(event.data) as StreamEvent;
       applyStreamEvent(streamEvent);
 
-      if (streamEvent.type === "overall") {
+      if (streamEvent.type === "status") {
+        statusByCluster.set(streamEvent.cluster, streamEvent.status);
+      }
+
+      // Close only once every cluster has settled (ready/failed). A downed
+      // service reports "failed" via its caller's circuit-breaker fallback
+      // without ever passing through "running", so "no cluster running" is not
+      // a safe completion signal — wait for a terminal status from each.
+      const allSettled = clusters.every(({ key }) => {
+        const status = statusByCluster.get(key);
+        return status === "ready" || status === "failed";
+      });
+
+      if (allSettled) {
         eventSource.close();
         eventSourcesRef.current.delete(runId);
       }
@@ -245,7 +265,6 @@ export function useAnalysisDashboard() {
               [streamEvent.cluster]: {
                 ...currentCluster,
                 status: streamEvent.status,
-                reason: streamEvent.reason,
               },
             },
           };

@@ -3,7 +3,6 @@ import {
   AlgorithmStatus,
   AnalysisResult,
   Cluster,
-  Equipment,
   EquipmentResult,
   OptionalEquipmentConfig,
   ResultMessage,
@@ -11,32 +10,10 @@ import {
 } from "@shared";
 import { Injectable, NotFoundException } from "@nestjs/common";
 
-const EQUIPMENT_BY_CLUSTER: Record<Cluster, Equipment[]> = {
-  [Cluster.FLUIDS]: [
-    Equipment.OIL_SYSTEM,
-    Equipment.FUEL_SYSTEM,
-    Equipment.COOLING_SYSTEM,
-  ],
-  [Cluster.DRIVETRAIN]: [
-    Equipment.POWER_TRANSMISSION,
-    Equipment.GEARBOX_OPTIONS,
-  ],
-  [Cluster.MECHANICAL]: [
-    Equipment.STARTING_SYSTEM,
-    Equipment.AUXILIARY_PTO,
-    Equipment.MOUNTING_SYSTEM,
-    Equipment.EXHAUST_SYSTEM,
-  ],
-  [Cluster.EMS]: [
-    Equipment.ENGINE_MANAGEMENT_SYSTEM,
-    Equipment.MONITORING_CONTROL_SYSTEM,
-  ],
-};
-
 @Injectable()
 export class AnalysisService {
   private runs = new Map<string, Run>();
-  private readonly resultClusters = Object.values(Cluster);
+  private readonly clusters = Object.values(Cluster);
 
   createRun(runId: string, config: OptionalEquipmentConfig) {
     this.runs.set(runId, {
@@ -76,6 +53,37 @@ export class AnalysisService {
     }
 
     run.overallEmitted = false;
+
+    // Fresh stream so the retry does not replay the previous run's buffered
+    // events — a stale "overall" would close the reconnecting client's SSE.
+    run.subject = new ReplaySubject(50);
+
+    // Re-seed the retained clusters so a reconnecting client sees their state.
+    for (const retained of this.clusters) {
+      const state = run.clusters[retained];
+
+      if (!state) {
+        continue;
+      }
+
+      if (state.status) {
+        run.subject.next({
+          type: "status",
+          runId,
+          cluster: retained,
+          status: state.status,
+        });
+      }
+
+      if (state.results) {
+        run.subject.next({
+          type: "result",
+          runId,
+          cluster: retained,
+          results: state.results,
+        });
+      }
+    }
   }
 
   applyStatusMessage(message: StatusMessage) {
@@ -95,13 +103,7 @@ export class AnalysisService {
       ...message,
     });
 
-    if (message.status === AlgorithmStatus.FAILED) {
-      this.applyResultMessage({
-        runId: message.runId,
-        cluster: message.cluster,
-        results: this.buildFailedResults(message.cluster),
-      });
-    }
+    this.evaluateOverall(message.runId, run);
   }
 
   applyResultMessage(message: ResultMessage) {
@@ -120,33 +122,32 @@ export class AnalysisService {
       type: "result",
       ...message,
     });
+  }
 
+  private evaluateOverall(runId: string, run: Run) {
     if (run.overallEmitted) {
       return;
     }
 
-    const hasAllResults = this.resultClusters.every(
-      (cluster) => run.clusters[cluster]?.results !== undefined,
+    const statuses = this.clusters.map(
+      (cluster) => run.clusters[cluster]?.status,
     );
 
-    if (!hasAllResults) {
+    if (statuses.some((status) => status === AlgorithmStatus.FAILED)) {
+      this.emitOverall(runId, run, AnalysisResult.FAILED);
       return;
     }
 
-    const allResults = this.resultClusters.flatMap(
-      (cluster) => run.clusters[cluster]?.results ?? [],
-    );
+    if (statuses.every((status) => status === AlgorithmStatus.READY)) {
+      this.emitOverall(runId, run, AnalysisResult.OK);
+    }
+  }
 
-    const overall = allResults.some(
-      (result) => result.result === AnalysisResult.FAILED,
-    )
-      ? AnalysisResult.FAILED
-      : AnalysisResult.OK;
-
+  private emitOverall(runId: string, run: Run, overall: AnalysisResult) {
     run.overallEmitted = true;
     run.subject.next({
       type: "overall",
-      runId: message.runId,
+      runId,
       overall,
     });
   }
@@ -159,13 +160,6 @@ export class AnalysisService {
     }
 
     return run;
-  }
-
-  private buildFailedResults(cluster: Cluster): EquipmentResult[] {
-    return EQUIPMENT_BY_CLUSTER[cluster].map((equipment) => ({
-      equipment,
-      result: AnalysisResult.FAILED,
-    }));
   }
 }
 

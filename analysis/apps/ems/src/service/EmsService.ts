@@ -8,7 +8,6 @@ import {
   Equipment,
   EquipmentResult,
   KafkaClient,
-  StatusMessage,
 } from "@shared";
 
 const ANALYSIS_DURATION_MS = 5_000;
@@ -65,28 +64,6 @@ export class EmsService {
 
     void this.run(request.runId, upstreamResults).finally(() => {
       run.running = false;
-    });
-  }
-
-  handleStatusMessage(message: StatusMessage) {
-    if (
-      message.status !== AlgorithmStatus.FAILED ||
-      !this.requiredUpstreamClusters.includes(message.cluster)
-    ) {
-      return;
-    }
-
-    const run = this.runs.get(message.runId) ?? {
-      upstreamByCluster: {},
-    };
-
-    this.runs.set(message.runId, run);
-
-    this.kafkaClient.emitStatus({
-      runId: message.runId,
-      cluster: this.cluster,
-      status: AlgorithmStatus.FAILED,
-      reason: "blocked",
     });
   }
 

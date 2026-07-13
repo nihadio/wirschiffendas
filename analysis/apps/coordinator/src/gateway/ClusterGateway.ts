@@ -10,7 +10,6 @@ import {
   AnalyzeRequest,
   Cluster,
   createCircuitBreaker,
-  FailureReason,
   KafkaClient,
   OptionalEquipmentConfig,
 } from "@shared";
@@ -27,10 +26,7 @@ export class ClusterGateway {
     [string],
     OptionalEquipmentConfig
   >;
-  private readonly analyzeBreakers: Record<
-    Cluster,
-    CircuitBreaker<[AnalyzeRequest]>
-  >;
+  private readonly fluidsBreaker: CircuitBreaker<[AnalyzeRequest]>;
 
   constructor(
     private analysisService: AnalysisService,
@@ -49,22 +45,13 @@ export class ClusterGateway {
       },
     );
 
-    this.analyzeBreakers = {
-      [Cluster.FLUIDS]: this.createAnalyzeBreaker(Cluster.FLUIDS, (request) =>
-        this.failFluidsChain(request),
-      ),
-      [Cluster.DRIVETRAIN]: this.createAnalyzeBreaker(
-        Cluster.DRIVETRAIN,
-        (request) => this.failUpstreamCluster(request, Cluster.DRIVETRAIN),
-      ),
-      [Cluster.MECHANICAL]: this.createAnalyzeBreaker(
-        Cluster.MECHANICAL,
-        (request) => this.failUpstreamCluster(request, Cluster.MECHANICAL),
-      ),
-      [Cluster.EMS]: this.createAnalyzeBreaker(Cluster.EMS, (request) =>
-        this.applyFailure(request.runId, Cluster.EMS),
-      ),
-    };
+    this.fluidsBreaker = createCircuitBreaker(
+      "coordinator->fluids",
+      (request: AnalyzeRequest) =>
+        this.algorithmClient.analyze(Cluster.FLUIDS, request),
+      (request: AnalyzeRequest) =>
+        this.applyFailure(request.runId, Cluster.FLUIDS),
+    );
   }
 
   async getConfig(configId: string) {
@@ -80,7 +67,7 @@ export class ClusterGateway {
   }
 
   startFluids(request: AnalyzeRequest) {
-    void this.analyzeBreakers[Cluster.FLUIDS].fire(request);
+    void this.fluidsBreaker.fire(request);
   }
 
   retry(runId: string, cluster: string) {
@@ -91,19 +78,34 @@ export class ClusterGateway {
     const retriedCluster = cluster as Cluster;
     const config = this.analysisService.getConfig(runId);
 
+    // A failed service in this simulation was simply down, so it holds no state
+    // to replay. The coordinator's projection is the run's record, so every
+    // retry is re-injected from here.
     if (retriedCluster === Cluster.EMS) {
-      this.retryEms(runId, config);
-
-      return {
-        accepted: true,
-        runId,
-        cluster: retriedCluster,
-      };
+      // Build EMS input before mutating state so a missing upstream 400s cleanly.
+      const requests = this.buildEmsRetryRequests(runId, config);
+      this.analysisService.resetForRetry(runId, Cluster.EMS);
+      requests.forEach((request) => {
+        void this.algorithmClient
+          .analyze(Cluster.EMS, request)
+          .catch(() => this.applyFailure(runId, Cluster.EMS));
+      });
+    } else if (retriedCluster === Cluster.FLUIDS) {
+      this.analysisService.resetForRetry(runId, Cluster.FLUIDS);
+      this.fluidsBreaker.close();
+      void this.fluidsBreaker.fire({ runId, config });
+    } else {
+      // Drivetrain/mechanical only need the anchor marker + config.
+      this.analysisService.resetForRetry(runId, retriedCluster);
+      void this.algorithmClient
+        .analyze(retriedCluster, {
+          runId,
+          config,
+          upstreamCluster: Cluster.FLUIDS,
+        })
+        .catch(() => this.applyFailure(runId, retriedCluster));
     }
 
-    this.analysisService.resetForRetry(runId, retriedCluster);
-    this.analyzeBreakers[retriedCluster].close();
-    void this.analyzeBreakers[retriedCluster].fire({ runId, config });
     return {
       accepted: true,
       runId,
@@ -111,34 +113,23 @@ export class ClusterGateway {
     };
   }
 
-  private retryEms(runId: string, config: OptionalEquipmentConfig) {
-    const requests = [Cluster.DRIVETRAIN, Cluster.MECHANICAL].map(
-      (upstreamCluster): AnalyzeRequest => {
-        const upstreamResults = this.analysisService.getClusterResults(
-          runId,
-          upstreamCluster,
+  private buildEmsRetryRequests(
+    runId: string,
+    config: OptionalEquipmentConfig,
+  ): AnalyzeRequest[] {
+    return [Cluster.DRIVETRAIN, Cluster.MECHANICAL].map((upstreamCluster) => {
+      const upstreamResults = this.analysisService.getClusterResults(
+        runId,
+        upstreamCluster,
+      );
+
+      if (!upstreamResults?.length) {
+        throw new BadRequestException(
+          `Cannot retry EMS without ${upstreamCluster} results. Retry it first.`,
         );
+      }
 
-        if (!upstreamResults?.length) {
-          throw new BadRequestException(
-            `Cannot retry EMS without ${upstreamCluster} results.`,
-          );
-        }
-
-        return {
-          runId,
-          config,
-          upstreamCluster,
-          upstreamResults,
-        };
-      },
-    );
-
-    this.analysisService.resetForRetry(runId, Cluster.EMS);
-    this.analyzeBreakers[Cluster.EMS].close();
-
-    requests.forEach((request) => {
-      void this.analyzeBreakers[Cluster.EMS].fire(request);
+      return { runId, config, upstreamCluster, upstreamResults };
     });
   }
 
@@ -175,38 +166,11 @@ export class ClusterGateway {
     };
   }
 
-  private createAnalyzeBreaker(
-    cluster: Cluster,
-    fallback: (request: AnalyzeRequest) => void,
-  ) {
-    return createCircuitBreaker(
-      `coordinator->${cluster}`,
-      (request: AnalyzeRequest) =>
-        this.algorithmClient.analyze(cluster, request),
-      fallback,
-    );
-  }
-
-  private failUpstreamCluster(request: AnalyzeRequest, cluster: Cluster) {
-    this.applyFailure(request.runId, cluster);
-  }
-
-  private failFluidsChain(request: AnalyzeRequest) {
-    this.applyFailure(request.runId, Cluster.FLUIDS);
-    this.applyFailure(request.runId, Cluster.DRIVETRAIN, "blocked");
-    this.applyFailure(request.runId, Cluster.MECHANICAL, "blocked");
-  }
-
-  private applyFailure(
-    runId: string,
-    cluster: Cluster,
-    reason?: FailureReason,
-  ) {
+  private applyFailure(runId: string, cluster: Cluster) {
     this.kafkaClient.emitStatus({
       runId,
       cluster,
       status: AlgorithmStatus.FAILED,
-      ...(reason ? { reason } : {}),
     });
   }
 }
