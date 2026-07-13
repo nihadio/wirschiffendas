@@ -1,0 +1,232 @@
+<mxfile host="65bd71144e" compressed="false">
+    <diagram id="ebene-1" name="Ebene 1 - Blackbox">
+        <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1400" pageHeight="800" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="l1-title" value="arc42-Bausteinsicht · Ebene 1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1;fontColor=#1f2937;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="40" width="520" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1-subtitle" value="Systemkontext des Analyse-Prototyps" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#6b7280;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="82" width="520" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1-ui" value="&lt;b&gt;React-UI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;&amp;lt;&amp;lt;Frontend&amp;gt;&amp;gt;&lt;br&gt;Konfigurationen, Runs, Status, Resultate und Retry&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=17;fontColor=#1f2937;spacing=10;" parent="1" vertex="1">
+                    <mxGeometry y="270" width="300" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1-analysis" value="&lt;b&gt;Subsystem Analysis&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;&amp;lt;&amp;lt;Software-System&amp;gt;&amp;gt;&lt;br&gt;Konfigurationsverwaltung, choreografierte Analyse, Statusprojektion und Gesamtergebnis&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontSize=20;fontColor=#1f2937;spacing=16;" parent="1" vertex="1">
+                    <mxGeometry x="690" y="220" width="520" height="270" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1-rest" value="REST/HTTP&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Konfiguration, Start, Retry, Simulation&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.35;entryX=0;entryY=0.35;" parent="1" source="l1-ui" target="l1-analysis" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="l1-sse" value="SSE&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Status, Resultate, Overall&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;strokeColor=#0f766e;fontColor=#115e59;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=0;exitY=0.72;entryX=1;entryY=0.72;" parent="1" source="l1-analysis" target="l1-ui" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="690" y="378"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="l1-note" value="Ebene 2 öffnet das Subsystem Analysis als Whitebox." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#5f4b16;fontSize=13;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="840" y="560" width="300" height="90" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="ebene-2" name="Ebene 2 - Whitebox">
+        <mxGraphModel dx="3102" dy="2149" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1050" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="l2-title" value="arc42-Bausteinsicht · Ebene 2 · Whitebox Analysis" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=23;fontStyle=1;fontColor=#1f2937;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="-35" width="700" height="35" as="geometry"/>
+                </mxCell>
+                <mxCell id="l2-ui" value="&lt;b&gt;React-UI&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&amp;lt;&amp;lt;Frontend&amp;gt;&amp;gt;&lt;br&gt;localhost (Vite)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=16;fontColor=#1f2937;spacing=8;" parent="1" vertex="1">
+                    <mxGeometry x="-260" y="285" width="190" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="l2-analysis" value="&lt;b&gt;Subsystem Analysis&lt;/b&gt; · &amp;lt;&amp;lt;Whitebox&amp;gt;&amp;gt;" style="swimlane;html=1;rounded=1;arcSize=3;startSize=42;horizontal=1;fillColor=#f8fafc;swimlaneFillColor=#eaf2f8;strokeColor=#6c8ebf;strokeWidth=3;fontSize=18;fontStyle=1;fontColor=#1f2937;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="55" width="1490" height="1115" as="geometry"/>
+                </mxCell>
+                <mxCell id="coordinator" value="&lt;b&gt;Coordinator&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&amp;lt;&amp;lt;Microservice&amp;gt;&amp;gt;&lt;br&gt;Port 3000&lt;br&gt;Entry Point · Read Model · Overall · Retry-Publisher · SSE&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=7;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontSize=16;fontColor=#1f2937;spacing=8;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="40" y="85" width="245" height="145" as="geometry"/>
+                </mxCell>
+                <mxCell id="config" value="&lt;b&gt;Config-Service&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&amp;lt;&amp;lt;Microservice&amp;gt;&amp;gt; · Port 3001&lt;br&gt;CRUD für Motorkonfigurationen&lt;/font&gt;" style="swimlane;html=1;rounded=1;arcSize=7;startSize=75;horizontal=1;fillColor=#fff2cc;swimlaneFillColor=#fff8df;strokeColor=#d6b656;strokeWidth=2;fontSize=16;fontColor=#1f2937;collapsible=0;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="935" y="62.5" width="275" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="postgres" value="&lt;b&gt;PostgreSQL 16&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;Config-Datenbank&lt;br&gt;Port 5432 · persistentes Volume&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontSize=13;fontColor=#1f2937;spacingTop=10;" parent="config" vertex="1">
+                    <mxGeometry x="35" y="88" width="205" height="92" as="geometry"/>
+                </mxCell>
+                <mxCell id="fluids" value="&lt;b&gt;Fluids&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&amp;lt;&amp;lt;Algorithmus-Microservice&amp;gt;&amp;gt; · Port 3002&lt;br&gt;Anker&lt;br&gt;Oil · Fuel · Cooling System&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=7;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=16;fontColor=#1f2937;spacing=8;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="220" y="340" width="245" height="145" as="geometry"/>
+                </mxCell>
+                <mxCell id="drivetrain" value="&lt;b&gt;Drivetrain&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&amp;lt;&amp;lt;Algorithmus-Microservice&amp;gt;&amp;gt; · Port 3003&lt;br&gt;Power Transmission&lt;br&gt;Gearbox Options&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=7;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=16;fontColor=#1f2937;spacing=8;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="545" y="205" width="245" height="135" as="geometry"/>
+                </mxCell>
+                <mxCell id="mechanical" value="&lt;b&gt;Mechanical&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&amp;lt;&amp;lt;Algorithmus-Microservice&amp;gt;&amp;gt; · Port 3004&lt;br&gt;Starting · Auxiliary PTO&lt;br&gt;Mounting · Exhaust System&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=7;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=16;fontColor=#1f2937;spacing=8;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="545" y="500" width="245" height="145" as="geometry"/>
+                </mxCell>
+                <mxCell id="ems" value="&lt;b&gt;EMS&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;&amp;lt;&amp;lt;Algorithmus-Microservice&amp;gt;&amp;gt; · Port 3005&lt;br&gt;Fan-in: Drivetrain + Mechanical&lt;br&gt;Engine Management · Monitoring/Control&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=7;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;fontSize=16;fontColor=#1f2937;spacing=8;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="1140" y="375" width="270" height="155" as="geometry"/>
+                </mxCell>
+                <mxCell id="kafka" value="&lt;b&gt;Apache Kafka&lt;/b&gt; · &amp;lt;&amp;lt;Message Broker&amp;gt;&amp;gt;&lt;br&gt;&lt;font style=&quot;font-size:12px&quot;&gt;analysis-status &amp;nbsp;|&amp;nbsp; analysis-result &amp;nbsp;|&amp;nbsp; analysis-retry&lt;br&gt;intern kafka:19092 · getrennte Consumer Groups je Service&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontSize=17;fontColor=#5f370e;spacing=10;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="160" y="995" width="930" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="legend" value="&lt;div style=&quot;text-align: center;&quot;&gt;&lt;b style=&quot;background-color: transparent;&quot;&gt;Notation&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align: center;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;font color=&quot;#2563eb&quot;&gt;━━ REST/HTTP&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#0f766e&quot;&gt;━━ SSE&lt;/font&gt;&lt;br&gt;&lt;font color=&quot;#c2410c&quot;&gt;┄┄ Kafka&lt;/font&gt;&lt;br&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px&quot;&gt;CB = Circuit Breaker&lt;br&gt;Pfeil = Kommunikationsrichtung&lt;/font&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#ffffff;strokeColor=#9ca3af;fontColor=#374151;fontSize=13;spacing=10;align=left;" parent="l2-analysis" vertex="1">
+                    <mxGeometry x="1250" y="75" width="205" height="185" as="geometry"/>
+                </mxCell>
+                <mxCell id="coordinator-config" value="REST/HTTP · CB&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;GET /configs/:id&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.32;entryX=0;entryY=0.32;" parent="l2-analysis" source="coordinator" target="config" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="coordinator-fluids" value="REST/HTTP · CB&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;POST /analyze&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="coordinator" target="fluids" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="350" y="185"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="fluids-drivetrain" value="REST/HTTP · CB&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;POST /analyze&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.3;" parent="l2-analysis" source="fluids" target="drivetrain" edge="1">
+                    <mxGeometry x="-0.1195" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="660" y="383"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="fluids-mechanical" value="REST/HTTP · CB&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;POST /analyze&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.72;" parent="l2-analysis" source="fluids" target="mechanical" edge="1">
+                    <mxGeometry x="-0.162" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                        <Array as="points">
+                            <mxPoint x="660" y="444"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="drivetrain-ems" value="REST/HTTP · CB&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;POST /analyze · source=drivetrain&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.45;" parent="l2-analysis" source="drivetrain" target="ems" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="970" y="266"/>
+                            <mxPoint x="970" y="453"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mechanical-ems" value="REST/HTTP · CB&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;POST /analyze · source=mechanical&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.72;" parent="l2-analysis" source="mechanical" target="ems" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="970" y="573"/>
+                            <mxPoint x="970" y="487"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="fluids-publish" value="Status + Result" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="fluids" target="kafka" edge="1">
+                    <mxGeometry x="0.1064" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="310" y="745"/>
+                            <mxPoint x="310" y="745"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="drivetrain-publish" value="Status + Result" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="drivetrain" target="kafka" edge="1">
+                    <mxGeometry x="0.1788" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="760" y="375"/>
+                            <mxPoint x="860" y="375"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mechanical-publish" value="Status + Result" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="mechanical" target="kafka" edge="1">
+                    <mxGeometry x="-0.2571" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="700" y="815"/>
+                            <mxPoint x="700" y="815"/>
+                        </Array>
+                        <mxPoint y="-1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ems-publish" value="Status + Result" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="ems" target="kafka" edge="1">
+                    <mxGeometry x="-0.0543" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1240" y="1025"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="kafka-coordinator-events" value="analysis-status&lt;br&gt;analysis-result" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;entryX=0.05;entryY=1;" parent="l2-analysis" source="kafka" target="coordinator" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="52" y="1055"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="coordinator-kafka-retry" value="analysis-retry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="coordinator" target="kafka" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="120" y="1048"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="kafka-fluids-retry" value="Retry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="kafka" target="fluids" edge="1">
+                    <mxGeometry x="0.098" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="343" y="865"/>
+                            <mxPoint x="343" y="865"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="kafka-drivetrain-retry" value="Retry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;" parent="l2-analysis" source="kafka" target="drivetrain" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="810" y="995"/>
+                            <mxPoint x="810" y="385"/>
+                            <mxPoint x="730" y="385"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="kafka-mechanical-retry" value="Retry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="kafka" target="mechanical" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="650" y="815"/>
+                            <mxPoint x="650" y="815"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="kafka-ems-events" value="Retry + Upstream-Status" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 5;strokeWidth=2;strokeColor=#c2410c;fontColor=#9a3412;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="l2-analysis" source="kafka" target="ems" edge="1">
+                    <mxGeometry x="0.1033" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1325" y="1047"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ui-coordinator-rest" value="REST/HTTP&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Start · Retry · Simulation&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;" parent="1" source="l2-ui" target="coordinator" edge="1">
+                    <mxGeometry x="-0.2183" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="-120" y="190"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                        <mxPoint x="220" y="190" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ui-config-rest" value="REST/HTTP&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Config CRUD&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#2563eb;fontColor=#1e3a8a;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;entryX=0;entryY=0.25;" parent="1" source="l2-ui" target="config" edge="1">
+                    <mxGeometry x="-0.1663" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="-165" y="120"/>
+                            <mxPoint x="1080" y="120"/>
+                            <mxPoint x="1080" y="165"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="coordinator-ui-sse" value="SSE&lt;br&gt;&lt;font style=&quot;font-size:10px&quot;&gt;Status · Resultat · Overall&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#0f766e;fontColor=#115e59;endArrow=block;endFill=1;labelBackgroundColor=#ffffff;exitX=0;exitY=0.78;entryX=1;entryY=0.8;" parent="1" source="coordinator" target="l2-ui" edge="1">
+                    <mxGeometry x="0.098" y="-1" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="180" y="253"/>
+                            <mxPoint x="180" y="381"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
