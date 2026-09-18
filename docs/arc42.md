@@ -78,7 +78,7 @@ Die Systemgrenze umfasst die React-UI und die Analyse-Subsysteme. Innerhalb des 
 
 Die UI übergibt beim Analyse-Start ausschließlich die UUID einer vorhandenen Konfiguration. Der Coordinator prüft diese UUID beim Config-Service, erzeugt eine neue `runId` und startet die Choreografie. Status und Ergebnisse eines Runs verlassen das Backend über einen SSE-Stream.
 
-Der PoC realisiert den Bounded Context *Analysis* aus der Context Map (Anhang B / `WirSchiffenDas.drawio`); der dort als Blackbox modellierte `Analysis-Service` ist hier als Whitebox mit sechs Bausteinen ausgeführt. `IAnalysis` entspricht dem Coordinator-Endpunkt.
+Der PoC realisiert den Bounded Context *Analysis* aus der Context Map (Abbildung unten, Quelle `docs/WirSchiffenDas.drawio`; SOLL-Bausteinsicht in Anhang B); der dort als Blackbox modellierte `Analysis-Service` ist hier als Whitebox mit sechs Bausteinen ausgeführt. `IAnalysis` entspricht dem Coordinator-Endpunkt.
 
 ![Kontextsicht der SOLL-Architektur WirSchiffenDas (Übung 4b)](img/WirSchiffenDas_KontextSicht.png)
 
@@ -112,12 +112,13 @@ Die Kafka-Consumer verwenden getrennte Gruppen (`coordinator`, `fluids`, `drivet
 
 ## 5. Bausteinsicht
 
-Die editierbare Bausteinsicht liegt als diagrams.net-Datei vor: [Baustein-Sicht.drawio](./Baustein-Sicht.drawio).
+Die Bausteinsicht ist als UML-Komponentendiagramm in zwei Ebenen modelliert (Quellen in `docs/diagrams/*.puml`, gerendert mit PlantUML). Ebene 1 zeigt die React-UI und das Subsystem Analysis als Blackbox mit den drei angebotenen Schnittstellen; Ebene 2 öffnet das Subsystem als Whitebox mit den sechs Services, PostgreSQL, Kafka, den angebotenen und benötigten Schnittstellen sowie den sechs durch Circuit Breaker geschützten REST-Kanten. Die Farben-Legende markiert die Änderungen gegenüber dem Stand aus Übung 5 (grün neu, gelb geändert, grau unverändert) und die Herkunft der Technologien (OSS / In-house).
 
-Die Datei enthält zwei Ebenen:
+![Bausteinsicht Ebene 1: Blackbox Subsystem Analysis](img/bausteinsicht-ebene1.png)
 
-- Ebene 1 zeigt die React-UI und das Analyse-Subsystem als Blackbox.
-- Ebene 2 öffnet das Analyse-Subsystem als Whitebox mit den sechs Services, PostgreSQL, Kafka sowie den real implementierten REST-, Kafka- und SSE-Verbindungen.
+![Bausteinsicht Ebene 2: Whitebox Subsystem Analysis mit Interfaces, Circuit-Breaker-Kanten und Farben-Legende](img/bausteinsicht-ebene2.png)
+
+Eine ältere, editierbare Fassung ohne UML-Schnittstellen liegt zusätzlich als diagrams.net-Datei vor: [Baustein-Sicht.drawio](./Baustein-Sicht.drawio).
 
 ### 5.1 Whitebox Analyse-Subsystem
 
@@ -144,6 +145,8 @@ Der Coordinator besitzt keine direkte Startverbindung zu Drivetrain, Mechanical 
 6. EMS sammelt Drivetrain und Mechanical in `readyUpstreams`. Erst wenn beide vorhanden sind und der Run weder läuft noch abgeschlossen ist, startet die EMS-Analyse.
 7. Der Coordinator konsumiert `analysis-status` und `analysis-result`, aktualisiert die Run-Projektion und sendet jedes Ereignis per SSE an die UI.
 8. Sobald alle vier Cluster nicht mehr `running` oder unbekannt sind, erzeugt der Coordinator genau ein `overall`: `failed`, falls mindestens ein Cluster `failed` ist, sonst `ok`.
+
+![Sequenzdiagramm Happy Path: Coordinator startet den Anker Fluids, Fluids startet Drivetrain und Mechanical parallel, EMS führt den Fan-in aus](img/sequenz-happy-path.png)
 
 ### 6.2 EMS-Fan-in
 
@@ -186,22 +189,15 @@ Der Circuit Breaker wiederholt den fachlichen Lauf nicht. Er begrenzt den REST-A
 
 Für die Ausfallsimulation besitzt jeder Algorithmus-Service einen `/simulation`-Controller. Der Coordinator reicht die UI-Aufrufe über `SimulationClient` weiter. Ist ein Service als `down` markiert, verweigert sein Controller den Start; beim Retry prüft der Service den Simulationszustand erneut (`analysis/libs/shared/src/simulation/*`).
 
+![Sequenzdiagramm Ausfall und Retry: Drivetrain simuliert down, Circuit Breaker fluids->drivetrain öffnet, EMS invalidiert, gezielter Retry über analysis-retry](img/sequenz-ausfall-retry.png)
+
 ## 7. Verteilungssicht
 
-`analysis/docker-compose.yml` definiert folgende Laufzeitknoten:
+![Verteilungssicht: Docker-Compose-Projekt mit acht Containern, Kommunikationspfaden und veröffentlichten Ports](img/verteilungssicht.png)
 
-| Compose-Service | Image/Build | Netzwerk und Persistenz |
-|---|---|---|
-| `coordinator` | gemeinsames Node-20-Image, Build-Argument `APP=coordinator` | Port 3000 ist zum Host veröffentlicht; interne URLs zeigen auf die Compose-Servicenamen. |
-| `config` | gemeinsames Node-20-Image, `APP=config` | Port 3001 ist zum Host veröffentlicht; verbindet sich mit `configdb`. |
-| `fluids` | gemeinsames Node-20-Image, `APP=fluids` | intern Port 3002; kennt `drivetrain:3003` und `mechanical:3004`. |
-| `drivetrain` | gemeinsames Node-20-Image, `APP=drivetrain` | intern Port 3003; kennt `ems:3005`. |
-| `mechanical` | gemeinsames Node-20-Image, `APP=mechanical` | intern Port 3004; kennt `ems:3005`. |
-| `ems` | gemeinsames Node-20-Image, `APP=ems` | intern Port 3005. |
-| `kafka` | `apache/kafka:3.9.1` | KRaft-Broker; intern `kafka:19092`, extern `localhost:9092`. |
-| `configdb` | `postgres:16` | Port 5432; persistentes Volume `wirschiffendas-configdb-data`. |
+`analysis/docker-compose.yml` startet acht Container: die sechs NestJS-Anwendungen aus demselben Multi-Stage-Dockerfile (Build auf `node:20`, Laufzeit `node:20-slim`, Build-Argument `APP`), `apache/kafka:3.9.1` als KRaft-Broker und `postgres:16` mit dem Volume `wirschiffendas-configdb-data`. Zum Host veröffentlicht sind die Ports 3000 (Coordinator) und 3001 (Config-Service); Kafka 9092 und PostgreSQL 5432 sind nur für die lokale Entwicklung freigegeben.
 
-Die Algorithmus-Container und der Coordinator warten per `depends_on` auf den Kafka-Healthcheck; der Config-Service wartet auf den PostgreSQL-Healthcheck. Für alle sechs Backend-Anwendungen wird dasselbe Multi-Stage-Dockerfile verwendet. Die React-UI wird im aktuellen Compose-Modell nicht gebaut oder gestartet.
+Jeder Anwendungscontainer besitzt einen Compose-`healthcheck` auf `GET /health` (`analysis/libs/shared/src/health/HealthController.ts`); Kafka und PostgreSQL prüfen sich über `kafka-topics.sh` und `pg_isready`. Die Algorithmus-Container warten per `depends_on` auf den Kafka-Healthcheck, der Config-Service auf PostgreSQL, der Coordinator auf Kafka, Config-Service und Fluids (`condition: service_healthy`). Die React-UI wird im aktuellen Compose-Modell nicht gebaut oder gestartet.
 
 ## 8. Querschnittliche Konzepte
 
