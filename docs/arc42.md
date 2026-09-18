@@ -18,7 +18,29 @@ Die implementierte Lösung verfolgt folgende Ziele:
 | Begrenzung technischer Fehler | Alle automatischen REST-Übergänge der Choreografie sind durch Circuit Breaker geschützt. | `analysis/apps/*/src/client/*.ts`, `analysis/apps/coordinator/src/gateway/ClusterGateway.ts` |
 | Persistente Konfiguration | Der Config-Service speichert Motormodell, Zylindervariante, Getriebetyp und Equipment-Auswahl in PostgreSQL. | `analysis/apps/config/src/entity/Config.ts`, `analysis/apps/config/src/service/ConfigService.ts` |
 
-### 1.2 Fachlicher Umfang
+### 1.2 Qualitätsziele
+
+| Priorität | Qualitätsziel (ISO 25010) | Szenario | Umsetzung |
+|---|---|---|---|
+| 1 | Reaktionsfähigkeit (Time Behaviour) | `POST /analysis/start` antwortet in < 500 ms mit `runId`, unabhängig von der Dauer der Algorithmen (5–10 s) | asynchroner Anker-Start, SSE-Push |
+| 2 | Widerstandsfähigkeit (Fault Tolerance) | Ausfall eines Algorithmus-Services führt innerhalb von 5 s (CB-Timeout) zu `failed` für genau diesen Cluster; übrige Cluster laufen weiter | Circuit Breaker beim Aufrufer, Fallback publiziert Status |
+| 3 | Beobachtbarkeit (Analysability) | Jeder Statuswechsel (`running/ready/failed`) ist ≤ 1 s nach Eintritt in der UI sichtbar | Kafka `analysis-status` → Coordinator → SSE |
+| 4 | Wiederherstellbarkeit (Recoverability) | Retry eines einzelnen Clusters ohne Neustart des gesamten Runs; abhängige Cluster (EMS) werden invalidiert | `analysis-retry`, EMS-Versionierung |
+| 5 | Modifizierbarkeit (Modifiability) | Ein neuer Algorithmus-Cluster kommt als eigener Service ohne Änderung an Coordinator hinzu | Choreografie, generische Topics |
+
+Die Dauern 5, 6, 9 und 10 s stammen aus `ANALYSIS_DURATION_MS` in `analysis/apps/{fluids,mechanical,drivetrain,ems}/src/service/*Service.ts`, der CB-Timeout von 5 s aus `analysis/libs/shared/src/circuit-breaker/CircuitBreaker.ts`.
+
+### 1.3 Stakeholder
+
+| Rolle | Erwartung |
+|---|---|
+| Geschäftsleitung WirSchiffenDas | Proof of Concept für Microservices gegen die Haltung der Abteilung Technik |
+| Ingenieur (Konfigurator) | Status je Algorithmus sichtbar, Retry einzeln, übrige Komponenten bleiben responsiv, Monitoring |
+| Software-Architekt Entwicklungsteam | Nachweis, dass Analyse-Komponente ohne Blockade von Manufacturing zerlegbar ist |
+| Betrieb | Container-Deployment, Health, zentrales Logging (offen, siehe §11) |
+| Prüfer (Prof. Alda) | arc42, 4-Sichten-Modell in UML, Begründung über Patterns/Anti-Patterns |
+
+### 1.4 Fachlicher Umfang
 
 Die vier Algorithmus-Services bearbeiten die in `Equipment.ts` definierten elf Optional-Equipment-Gruppen des Diesel Engine 2000 M96:
 
@@ -44,18 +66,7 @@ Die Algorithmen sind im PoC simuliert: Sie warten je nach Service 5, 6, 9 oder 1
 
 ### 2.2 Feste Ports und Adressen
 
-Die Standardports stammen aus den jeweiligen `environment.ts`-Dateien:
-
-| Baustein | Port | Verwendung |
-|---|---:|---|
-| Coordinator | 3000 | Start, Retry, Simulation und SSE |
-| Config-Service | 3001 | CRUD für Konfigurationen |
-| Fluids | 3002 | interner REST-Endpunkt `/analyze` |
-| Drivetrain | 3003 | interner REST-Endpunkt `/analyze` |
-| Mechanical | 3004 | interner REST-Endpunkt `/analyze` |
-| EMS | 3005 | interner REST-Endpunkt `/analyze` |
-| PostgreSQL | 5432 | Datenbank des Config-Service |
-| Kafka | 19092 intern, 9092 vom Host | Ereignisse und Retry-Kommandos |
+Die Standardports stammen aus den jeweiligen `environment.ts`-Dateien: Coordinator 3000, Config-Service 3001, Fluids 3002, Drivetrain 3003, Mechanical 3004 und EMS 3005 (intern `/analyze`), Kafka 19092 im Compose-Netz und 9092 vom Host, PostgreSQL 5432; die Verteilungssicht in §7 zeigt dieselben Ports als Kommunikationspfade.
 
 Die React-UI verwendet derzeit feste Entwicklungsadressen `http://localhost:3000` und `http://localhost:3001` (`analysis-ui/src/api.ts`). Sie ist nicht als Service in `analysis/docker-compose.yml` enthalten.
 
@@ -66,6 +77,12 @@ Die React-UI verwendet derzeit feste Entwicklungsadressen `http://localhost:3000
 Die Systemgrenze umfasst die React-UI und die Analyse-Subsysteme. Innerhalb des Backends verwaltet der Config-Service die Konfigurationen; der Coordinator bildet den Einstieg und die UI-Projektion; vier Algorithmus-Services simulieren die Analyse. Externe Fachsysteme sind im Repository nicht angebunden.
 
 Die UI übergibt beim Analyse-Start ausschließlich die UUID einer vorhandenen Konfiguration. Der Coordinator prüft diese UUID beim Config-Service, erzeugt eine neue `runId` und startet die Choreografie. Status und Ergebnisse eines Runs verlassen das Backend über einen SSE-Stream.
+
+Der PoC realisiert den Bounded Context *Analysis* aus der Context Map (Anhang B / `WirSchiffenDas.drawio`); der dort als Blackbox modellierte `Analysis-Service` ist hier als Whitebox mit sechs Bausteinen ausgeführt. `IAnalysis` entspricht dem Coordinator-Endpunkt.
+
+![Kontextsicht der SOLL-Architektur WirSchiffenDas (Übung 4b)](img/WirSchiffenDas_KontextSicht.png)
+
+![Context Map der Bounded Contexts (Übung 4c); der PoC füllt den Kontext Analysis aus](img/WirSchiffenDas_ContextMap.png)
 
 ### 3.2 Technischer Kontext
 
@@ -237,6 +254,62 @@ Jeder EMS-Run besitzt eine monoton erhöhte `version`. Beim Ausfall oder Retry e
 - **Entscheidung:** `AnalyzeRequest` enthält nur `runId` und optional `source`. `source` darf ausschließlich `drivetrain` oder `mechanical` sein und wird für den EMS-Fan-in verwendet. Die vollständige Konfiguration verbleibt im Config-Service; der Coordinator prüft beim Start nur ihre Existenz.
 - **Konsequenzen:** Der Vertrag entspricht dem tatsächlich genutzten Datenbedarf des PoC und reduziert Kopplung. Die erzeugten Analyseergebnisse sind daher Simulationsergebnisse und keine aus den gespeicherten Equipment-Werten berechneten Resultate.
 - **Codebezug:** `analysis/libs/shared/src/dtos/AnalyzeRequest.ts`, `StartAnalysisRequest.ts`, `AnalysisController.ts`, `analysis/apps/*/src/service/*Service.ts`
+
+## 10. Qualitätsanforderungen
+
+### 10.1 Qualitätsbaum
+
+```mermaid
+flowchart LR
+  Q[Qualität Analyse-PoC] --> P[Performance Efficiency]
+  Q --> R[Reliability]
+  Q --> M[Maintainability]
+  P --> P1[Time Behaviour: Start < 500 ms]
+  R --> R1[Fault Tolerance: Ausfall isoliert]
+  R --> R2[Recoverability: Retry je Cluster]
+  M --> M1[Analysability: Status ≤ 1 s sichtbar]
+  M --> M2[Modifiability: neuer Cluster ohne Coordinator-Änderung]
+```
+
+### 10.2 Qualitätsszenarien
+
+| ID | Stimulus | System-Reaktion | Messgröße |
+|---|---|---|---|
+| QS-1 | UI startet Analyse | `runId` zurück, Algorithmen laufen im Hintergrund | Antwortzeit < 500 ms |
+| QS-2 | Drivetrain ist `down` | Fluids-CB öffnet, publiziert `failed` für Drivetrain; Mechanical läuft weiter; EMS `failed` | ≤ 5 s bis Status, kein Blockieren anderer Cluster |
+| QS-3 | Retry Drivetrain nach `up` | Nur Drivetrain + EMS laufen erneut, Fluids/Mechanical-Resultate bleiben | Projektion setzt genau 2 Cluster zurück |
+| QS-4 | Kafka nicht erreichbar beim Start | Services starten nicht (`depends_on`), kein inkonsistenter Zustand | bekannte Grenze, siehe §11 |
+
+## 11. Risiken und technische Schulden
+
+| # | Schuld / Risiko | Bezug (Schirgi & Brenner) | Begründung im PoC | Gegenmaßnahme |
+|---|---|---|---|---|
+| TS-1 | `libs/shared` enthält Domänen-Code (Cluster, Equipment, DTOs, Messages); ein `package.json`, ein Dockerfile für alle Services | Anti-Pattern Shared Libraries (IV.B.2) | Monorepo-Build: Vertrag wird zur Build-Zeit geteilt, nicht zur Laufzeit; ein Team, ein Release-Zyklus | Kontrakte in Schema Registry (Avro/JSON Schema) auslagern; pro Service eigenes `package.json`; Domänen-Enums nicht mehr teilen |
+| TS-2 | UI ruft Coordinator und Config-Service direkt auf | No API Gateway (IV.B.3) | Zwei Endpunkte für einen PoC; Gateway wäre reiner Proxy | API Gateway / BFF vor Coordinator + Config, wie in der SOLL-Architektur der Firma modelliert |
+| TS-3 | Ursprünglich kein `/health` in den Services; Compose-Healthcheck nur für Kafka/PostgreSQL | No Health Check (IV.B.4) | erledigt (GET /health, Compose healthcheck) | `HealthController` in `analysis/libs/shared/src/health/`, `healthcheck` je Service in `analysis/docker-compose.yml`; Coordinator wartet mit `service_healthy` auf Config, Fluids und Kafka |
+| TS-4 | Logging nur auf stdout je Container, kein zentrales Logging, kein Monitoring | Local Logging, Insufficient Monitoring (IV.B.4) | Ausserhalb des PoC-Scopes; Ingenieur fordert Monitoring | Loki/Grafana oder ELK; Correlation-ID = `runId` ist bereits in jeder Nachricht |
+| TS-5 | Coordinator hält Run-Projektion in-memory (`ReplaySubject`), EMS hält Fan-in-Zustand in `Map` | Horizontal Scalability (IV.A.4) | Zustand ist run-lokal und kurzlebig | Projektion in Redis; EMS-Zustand persistieren; Kafka-Partitionierung nach `runId` |
+| TS-6 | Aufrufer publiziert `failed` für einen nicht erreichbaren Zielservice (z. B. Fluids für Drivetrain) | Status-Ownership (eigene Beobachtung) | Run muss einen terminalen Zustand erreichen; Ziel kann selbst nichts publizieren | Eigener Status `unreachable` statt `failed`, um technische von fachlicher Störung zu trennen |
+| TS-7 | Algorithmen lesen die Konfiguration nicht; Ergebnis immer `ok` | ADR-004 | Simulation der Abläufe, nicht der Fachlogik | Ein Cluster liest Config und liefert `failed` für eine definierte Equipment-Kombination |
+| TS-8 | Keine API-Versionierung, keine CI/CD-Pipeline im Repository | No API Versioning, No CI/CD (IV.B.3) | PoC, ein Konsument | `/v1/`-Prefix; GitLab-CI mit Build/Test/Push je Service |
+| TS-9 | `TypeORM synchronize: true` | — | PoC | Migrations |
+| R-1 | Kafka at-least-once: doppelte Status-Nachrichten möglich | — | EMS idempotent über `version`, Coordinator über `overallEmitted` | Message-Key = `runId`, Deduplikation im Consumer |
+
+## 12. Glossar
+
+| Begriff | Bedeutung |
+|---|---|
+| Cluster | Fachliche Gruppe von Optional-Equipment-Algorithmen, die ein eigener Service ausführt (`fluids`, `drivetrain`, `mechanical`, `ems` in `Cluster.ts`). |
+| Anker-Algorithmus | Der Algorithmus, den der Coordinator als einzigen direkt startet und der die Choreografie auslöst; im PoC Fluids. |
+| Run / `runId` | Ein Analyselauf für eine Konfiguration, identifiziert durch eine UUID, die jede Nachricht und jedes SSE-Ereignis trägt. |
+| Choreografie | Ablaufsteuerung, bei der jeder Service selbst entscheidet, wen er nach seiner Arbeit aufruft, ohne zentrale Prozessinstanz. |
+| Orchestrierung | Ablaufsteuerung, bei der eine zentrale Instanz den Prozess kennt und die Services Schritt für Schritt aufruft; im PoC bewusst nicht gewählt (ADR-001). |
+| Fan-in | Zusammenführen mehrerer unabhängiger Vorgänger in einem Schritt; EMS startet erst, wenn Drivetrain und Mechanical für dieselbe `runId` bereit sind. |
+| Circuit Breaker | Schutzmuster am Aufrufer, das einen fehlschlagenden Remote-Aufruf nach Timeout oder Fehlerquote unterbricht und einen Fallback ausführt (Opossum). |
+| Read Model / Projektion | Vom Coordinator aus Kafka-Ereignissen abgeleiteter, flüchtiger Zustand je Run, der nur der Anzeige dient und keinen Ablauf steuert. |
+| Consumer Group | Kafka-Konsumentengruppe; jeder Service hat eine eigene, damit jeder Service jede Nachricht eines Topics erhält. |
+| SSE | Server-Sent Events, ein unidirektionaler HTTP-Stream vom Coordinator zum Browser für Status, Resultat und Overall. |
+| Optional Equipment | Auswählbare Ausrüstungsgruppen des Diesel Engine 2000 M96 (z. B. Oil System, Gearbox Options), die je Cluster analysiert werden (`Equipment.ts`). |
 
 ## Anhang C: Anti-Pattern-Bewertung nach Schirgi & Brenner (Übung 4d / 6c)
 
