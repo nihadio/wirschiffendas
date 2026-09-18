@@ -7,3 +7,4 @@ export * from "./filters";
 export * from "./validation";
 export * from "./circuit-breaker";
 export * from "./simulation";
+export * from "./health";

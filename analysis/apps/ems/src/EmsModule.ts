@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ClientsModule } from "@nestjs/microservices";
 import {
   createKafkaClientProvider,
+  HealthController,
   KafkaClient,
   SimulationController,
   SimulationService,
@@ -12,7 +13,12 @@ import { EmsService } from "./service/EmsService";
 
 @Module({
   imports: [ClientsModule.register([createKafkaClientProvider()])],
-  controllers: [EmsController, EventController, SimulationController],
+  controllers: [
+    EmsController,
+    EventController,
+    SimulationController,
+    HealthController,
+  ],
   providers: [EmsService, KafkaClient, SimulationService],
 })
 export class EmsModule {}

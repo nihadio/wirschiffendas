@@ -7,6 +7,7 @@ import { FluidsController } from "./controller/FluidsController";
 import { FluidsService } from "./service/FluidsService";
 import {
   createKafkaClientProvider,
+  HealthController,
   HttpClient,
   KafkaClient,
   SimulationController,
@@ -16,7 +17,12 @@ import { ClientsModule } from "@nestjs/microservices";
 
 @Module({
   imports: [ClientsModule.register([createKafkaClientProvider()]), HttpModule],
-  controllers: [FluidsController, EventController, SimulationController],
+  controllers: [
+    FluidsController,
+    EventController,
+    SimulationController,
+    HealthController,
+  ],
   providers: [
     FluidsService,
     DrivetrainClient,

@@ -39,7 +39,14 @@ services:
         APP: config
     restart: on-failure
     environment:
+      SERVICE_NAME: config
       DB_HOST: configdb
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     depends_on:
       configdb:
         condition: service_healthy
@@ -53,9 +60,16 @@ services:
         APP: fluids
     restart: on-failure
     environment:
+      SERVICE_NAME: fluids
       KAFKA_BROKER: kafka:19092
       DRIVETRAIN_URL: http://drivetrain:3003
       MECHANICAL_URL: http://mechanical:3004
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     depends_on:
       kafka:
         condition: service_healthy
@@ -67,8 +81,15 @@ services:
         APP: drivetrain
     restart: on-failure
     environment:
+      SERVICE_NAME: drivetrain
       KAFKA_BROKER: kafka:19092
       EMS_URL: http://ems:3005
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3003/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     depends_on:
       kafka:
         condition: service_healthy
@@ -80,8 +101,15 @@ services:
         APP: mechanical
     restart: on-failure
     environment:
+      SERVICE_NAME: mechanical
       KAFKA_BROKER: kafka:19092
       EMS_URL: http://ems:3005
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3004/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     depends_on:
       kafka:
         condition: service_healthy
@@ -93,7 +121,14 @@ services:
         APP: ems
     restart: on-failure
     environment:
+      SERVICE_NAME: ems
       KAFKA_BROKER: kafka:19092
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3005/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     depends_on:
       kafka:
         condition: service_healthy
@@ -105,14 +140,25 @@ services:
         APP: coordinator
     restart: on-failure
     environment:
+      SERVICE_NAME: coordinator
       KAFKA_BROKER: kafka:19092
       CONFIG_URL: http://config:3001
       FLUIDS_URL: http://fluids:3002
       DRIVETRAIN_URL: http://drivetrain:3003
       MECHANICAL_URL: http://mechanical:3004
       EMS_URL: http://ems:3005
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
     depends_on:
       kafka:
+        condition: service_healthy
+      config:
+        condition: service_healthy
+      fluids:
         condition: service_healthy
     ports:
       - "3000:3000"

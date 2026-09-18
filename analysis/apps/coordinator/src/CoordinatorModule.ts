@@ -1,6 +1,11 @@
 import { Module } from "@nestjs/common";
 import { HttpModule } from "@nestjs/axios";
-import { createKafkaClientProvider, HttpClient, KafkaClient } from "@shared";
+import {
+  createKafkaClientProvider,
+  HealthController,
+  HttpClient,
+  KafkaClient,
+} from "@shared";
 import { AlgorithmClient } from "./client/AlgorithmClient";
 import { ConfigClient } from "./client/ConfigClient";
 import { SimulationClient } from "./client/SimulationClient";
@@ -13,7 +18,12 @@ import { ClientsModule } from "@nestjs/microservices";
 
 @Module({
   imports: [ClientsModule.register([createKafkaClientProvider()]), HttpModule],
-  controllers: [EventController, AnalysisController, SimulationController],
+  controllers: [
+    EventController,
+    AnalysisController,
+    SimulationController,
+    HealthController,
+  ],
   providers: [
     AnalysisService,
     ClusterGateway,
