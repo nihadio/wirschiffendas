@@ -1,0 +1,84 @@
+@startuml verteilungssicht
+' arc42 §7 Verteilungssicht – Fakten ausschließlich aus analysis/docker-compose.yml und analysis/Dockerfile
+title Verteilungssicht – Docker Compose Projekt "wirschiffendas-analysis" (UML-Verteilungsdiagramm)
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam linetype polyline
+skinparam ArrowFontSize 11
+skinparam nodesep 30
+skinparam ranksep 40
+
+node "Laptop" <<device>> as LAPTOP {
+
+  node "Browser" <<execution environment>> as BROWSER {
+    artifact "React-UI\n(Vite Dev-Server, localhost:5173)\n**nicht in Compose**" as UIART
+  }
+
+  rectangle "Host-Ports (published)\n3000 · 3001 · 9092 · 5432" as HOST
+
+  node "Docker Engine" <<execution environment>> as DOCKER {
+
+    node "coordinator" <<container>> as N_COORD {
+      artifact "dist/main.js\n<<node:20-slim>>\nPORT 3000" as A_COORD
+    }
+    node "config" <<container>> as N_CONF {
+      artifact "dist/main.js\n<<node:20-slim>>\nPORT 3001" as A_CONF
+    }
+    node "fluids" <<container>> as N_FLU {
+      artifact "dist/main.js\n<<node:20-slim>>\nPORT 3002" as A_FLU
+    }
+    node "drivetrain" <<container>> as N_DRV {
+      artifact "dist/main.js\n<<node:20-slim>>\nPORT 3003" as A_DRV
+    }
+    node "mechanical" <<container>> as N_MEC {
+      artifact "dist/main.js\n<<node:20-slim>>\nPORT 3004" as A_MEC
+    }
+    node "ems" <<container>> as N_EMS {
+      artifact "dist/main.js\n<<node:20-slim>>\nPORT 3005" as A_EMS
+    }
+    node "kafka" <<container>> as N_KAFKA {
+      artifact "apache/kafka:3.9.1\nKRaft, INTERNAL :19092\nEXTERNAL :9092" as A_KAFKA
+    }
+    node "configdb" <<container>> as N_DB {
+      artifact "postgres:16\nDB config :5432" as A_DB
+    }
+    database "configdb-data\n<<volume>>\nwirschiffendas-configdb-data" as VOL
+  }
+}
+
+' --- Browser -> published ports ---
+UIART --> HOST : HTTP localhost:3000 / :3001
+HOST --> N_COORD : 3000:3000
+HOST --> N_CONF : 3001:3001
+HOST ..> N_KAFKA : 9092:9092
+HOST ..> N_DB : 5432:5432
+
+' --- Compose-Netz: REST-Übergänge (Servicename:Port aus environment) ---
+N_COORD --> N_CONF : HTTP config:3001
+N_COORD --> N_FLU : HTTP fluids:3002
+N_COORD ..> N_DRV : :3003 Sim.
+N_COORD ..> N_MEC : :3004 Sim.
+N_COORD ..> N_EMS : :3005 Sim.
+N_FLU --> N_DRV : HTTP drivetrain:3003
+N_FLU --> N_MEC : HTTP mechanical:3004
+N_DRV --> N_EMS : HTTP ems:3005
+N_MEC --> N_EMS : HTTP ems:3005
+
+' --- Kafka (KAFKA_BROKER=kafka:19092) ---
+N_COORD --> N_KAFKA : :19092
+N_FLU --> N_KAFKA : :19092
+N_DRV --> N_KAFKA : :19092
+N_MEC --> N_KAFKA : :19092
+N_EMS --> N_KAFKA : :19092
+
+' --- Persistenz ---
+N_CONF --> N_DB : TCP configdb:5432
+N_DB -- VOL : /var/lib/postgresql/data
+
+legend bottom
+  **Build:** ein Multi-Stage-Dockerfile (node:20 → node:20-slim), Build-Argument APP je Service, CMD node dist/main.js
+  **Start-Reihenfolge (depends_on, condition: service_healthy):** config → configdb · fluids/drivetrain/mechanical/ems → kafka · coordinator → kafka, config, fluids
+  **Healthchecks:** GET /health je App-Container (node fetch), kafka-topics.sh für kafka, pg_isready für configdb · restart: on-failure
+  —— durchgezogen = fachlicher Pfad · ┄┄ gestrichelt = nur Simulation-Proxy bzw. nur für Entwicklung (Host-Ports 9092, 5432) · Kafka-Pfade: KAFKA_BROKER=kafka:19092
+endlegend
+@enduml

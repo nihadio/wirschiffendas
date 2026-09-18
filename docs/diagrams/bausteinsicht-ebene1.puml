@@ -1,0 +1,25 @@
+@startuml bausteinsicht-ebene1
+' arc42 §5 Bausteinsicht, Ebene 1 (Blackbox) – Quelle: docs/Baustein-Sicht.drawio, Seite "Ebene 1 - Blackbox"
+title Bausteinsicht Ebene 1 – Systemkontext des Analyse-PoC (Blackbox)
+skinparam componentStyle uml2
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+left to right direction
+
+actor "Ingenieur\n(Konfigurator)" as Ing
+
+component "React-UI\n<<Frontend>>\nKonfigurationen, Runs,\nStatus, Resultate, Retry" as UI #eeeeee
+
+component "Subsystem Analysis\n<<Software-System>>\nKonfigurationsverwaltung,\nchoreografierte Analyse,\nStatusprojektion, Gesamtergebnis" as SYS #eeeeee
+
+Ing --> UI : bedient (Browser)
+
+UI -(0- SYS : IAnalysis\nREST: start, retry, simulation
+UI -(0- SYS : IConfig\nREST: CRUD Konfigurationen
+UI -(0- SYS : IStream (SSE)\nstatus, result, overall
+
+note bottom of SYS
+  Ebene 2 (Whitebox) öffnet das Subsystem Analysis:
+  sechs Services, Apache Kafka, PostgreSQL.
+end note
+@enduml

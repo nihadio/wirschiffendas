@@ -1,0 +1,9 @@
+flowchart LR
+  Q[Qualität Analyse-PoC] --> P[Performance Efficiency]
+  Q --> R[Reliability]
+  Q --> M[Maintainability]
+  P --> P1[Time Behaviour: Start < 500 ms]
+  R --> R1[Fault Tolerance: Ausfall isoliert]
+  R --> R2[Recoverability: Retry je Cluster]
+  M --> M1[Analysability: Status ≤ 1 s sichtbar]
+  M --> M2[Modifiability: neuer Cluster ohne Coordinator-Änderung]

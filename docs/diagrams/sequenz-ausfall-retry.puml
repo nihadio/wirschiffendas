@@ -1,0 +1,65 @@
+@startuml sequenz-ausfall-retry
+' arc42 §6.3/§6.4 – Ausfall Drivetrain (Circuit Breaker) und gezielter Retry
+title Laufzeitsicht – Nicht erreichbarer Service, Circuit Breaker und Retry
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+autonumber
+
+participant "React-UI" as UI
+participant "Coordinator\n:3000" as C
+participant "Fluids\n:3002" as F
+participant "Drivetrain\n:3003" as D
+participant "EMS\n:3005" as E
+queue "Apache Kafka" as K
+
+== Ausfall simulieren ==
+UI -> C : POST /simulation/drivetrain/down
+C -> D : POST /simulation/down
+note over D #ffe0e0 : SimulationService.status = down\n/analyze antwortet 503
+
+== Analyselauf (Fluids ist fertig) ==
+F ->> D : POST /analyze { runId }
+D --> F : 503 Service is simulated down
+note over F #ffe0e0 : Circuit Breaker fluids->drivetrain\nfailure → **circuit opened**
+F ->> K : analysis-status { drivetrain, failed }\n(Fallback onUnreachable)
+K -->> E : drivetrain failed
+note over E : invalidate(): version++\nreadyUpstreams.delete(drivetrain)
+E ->> K : analysis-status { ems, failed }
+K -->> C : drivetrain failed, ems failed
+note over C : evaluateOverall: kein Cluster mehr running\n→ overall = failed
+C -->> UI : SSE status failed (drivetrain, ems)
+C -->> UI : SSE overall = failed
+UI -> UI : EventSource.close()
+
+== Wiederherstellen und Retry ==
+UI -> C : POST /simulation/drivetrain/up
+C -> D : POST /simulation/up
+UI -> C : POST /analysis/:runId/retry/drivetrain
+note over C : resetProjectionForRetry:\nProjektion Drivetrain + EMS zurücksetzen,\noverallEmitted = false, neuer ReplaySubject
+C ->> K : analysis-retry { runId, drivetrain }
+C --> UI : 201 { accepted, runId, cluster }
+UI -> C : GET /analysis/:runId/stream (SSE, neu)
+K -->> D : analysis-retry (Consumer Group drivetrain)
+K -->> E : analysis-retry drivetrain
+note over E : version++, readyUpstreams.delete(drivetrain)
+D -> D : simulationService.assertUp() ok → analyze()
+D ->> K : analysis-status { drivetrain, running }
+activate D
+note right of D : 9 s
+D ->> K : analysis-result { drivetrain, 2× ok }
+D ->> K : analysis-status { drivetrain, ready }
+deactivate D
+D ->> E : POST /analyze { runId, source: drivetrain }  **CB drivetrain->ems**
+E --> D : 202
+note over E : readyUpstreams = { mechanical, drivetrain }\n→ startIfReady
+E ->> K : analysis-status { ems, running }
+activate E
+note right of E : 10 s
+E ->> K : analysis-result { ems, 2× ok }
+E ->> K : analysis-status { ems, ready }
+deactivate E
+K -->> C : status / result (drivetrain, ems)
+note over C : evaluateOverall: alle 4 Cluster ready\n→ overall = ok
+C -->> UI : SSE overall = ok
+@enduml
