@@ -6,4 +6,4 @@ flowchart LR
   R --> R1[Fault Tolerance: Ausfall isoliert]
   R --> R2[Recoverability: Retry je Cluster]
   M --> M1[Analysability: Status ≤ 1 s sichtbar]
-  M --> M2[Modifiability: neuer Cluster ohne Coordinator-Änderung]
+  M --> M2[Modifiability: neuer Cluster = nur ein Eintrag in Cluster.ts und RETRY_PROJECTION_SCOPE; Anker-Start und Fan-in bleiben unberührt]

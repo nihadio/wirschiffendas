@@ -55,7 +55,7 @@ CONFIG -(0- DB : IConfigDB (TypeORM)
 
 legend bottom
   **Farben-Legende (Änderungen gegenüber Übung 5)**
-  |<#d9ead3> grün |= neu: Kafka-Topics, analysis-retry, EMS-Versionierung, Simulation-Controller (ISimulation) |
+  |<#d9ead3> grün |= neu: Kafka-Topics, analysis-retry |
   |<#fff2cc> gelb |= geändert: Coordinator ohne Retry-Ausführung, CB nur noch zu Config und Fluids; EMS mit Versionierung |
   |<#eeeeee> grau |= unverändert |
   **Herkunft der Technologien**

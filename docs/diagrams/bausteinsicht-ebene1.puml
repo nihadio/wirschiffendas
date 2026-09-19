@@ -14,7 +14,8 @@ component "Subsystem Analysis\n<<Software-System>>\nKonfigurationsverwaltung,\nc
 
 Ing --> UI : bedient (Browser)
 
-UI -(0- SYS : IAnalysis\nREST: start, retry, simulation
+UI -(0- SYS : IAnalysis\nREST: start, retry
+UI -(0- SYS : ISimulationProxy\nREST: down/up
 UI -(0- SYS : IConfig\nREST: CRUD Konfigurationen
 UI -(0- SYS : IStream (SSE)\nstatus, result, overall
 

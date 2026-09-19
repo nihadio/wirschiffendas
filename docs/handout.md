@@ -131,7 +131,7 @@ Nihad Jabrayilzade · Hochschule Bonn-Rhein-Sieg · Prüfer: Prof. Dr. Sascha Al
 | 2 | Shared Persistence | eine zentrale DB für alle Komponenten | <span class="ok">ja</span> – PostgreSQL nur beim Config-Service |
 | 1 | Hard-Coded Endpoints | feste IP-Adressen (100.2.33.255/products) | <span class="ok">ja</span> – Compose-DNS + `environment.ts` |
 
-Bewertung aller 21 Zeilen in arc42 Anhang C · 12 von 21 Lösungen im PoC umgesetzt, 1 teilweise
+Bewertung aller 21 Zeilen in arc42 Anhang C · 13 von 21 Lösungen im PoC umgesetzt, 1 teilweise
 
 <span class="warn">Offen (TS-1):</span> `libs/shared` teilt Domänen-Code (Cluster, Equipment, DTOs) – Anti-Pattern *Shared Libraries*, bewusst in Kauf genommen (Build-Zeit-Kopplung, ein Team)
 
@@ -183,9 +183,8 @@ Skript: `docs/demo.md` · Fallback: Bildschirmvideo (90 s) auf dem Desktop
 **Restriktionen (arc42 §11)**
 - TS-1 `libs/shared` teilt Domänen-Code; ein `package.json`, ein Dockerfile
 - TS-2 UI ruft Coordinator und Config-Service direkt, kein Gateway
-- TS-3 `/health` und Compose-Healthchecks – erledigt
-- TS-4 Logging nur stdout je Container, kein Monitoring
-- TS-5 Run-Projektion und EMS-Zustand in-memory, nicht horizontal skalierbar
+- TS-3 Logging nur stdout je Container, kein Monitoring
+- TS-4 Run-Projektion und EMS-Zustand in-memory, nicht horizontal skalierbar
 
 </div>
 </div>

@@ -26,7 +26,7 @@ Die implementierte Lösung verfolgt folgende Ziele:
 | 2 | Widerstandsfähigkeit (Fault Tolerance) | Ausfall eines Algorithmus-Services führt innerhalb von 5 s (CB-Timeout) zu `failed` für genau diesen Cluster; übrige Cluster laufen weiter | Circuit Breaker beim Aufrufer, Fallback publiziert Status |
 | 3 | Beobachtbarkeit (Analysability) | Jeder Statuswechsel (`running/ready/failed`) ist ≤ 1 s nach Eintritt in der UI sichtbar | Kafka `analysis-status` → Coordinator → SSE |
 | 4 | Wiederherstellbarkeit (Recoverability) | Retry eines einzelnen Clusters ohne Neustart des gesamten Runs; abhängige Cluster (EMS) werden invalidiert | `analysis-retry`, EMS-Versionierung |
-| 5 | Modifizierbarkeit (Modifiability) | Ein neuer Algorithmus-Cluster kommt als eigener Service ohne Änderung an Coordinator hinzu | Choreografie, generische Topics |
+| 5 | Modifizierbarkeit (Modifiability) | Ein neuer Algorithmus-Cluster kommt als eigener Service hinzu; nur ein Eintrag in `Cluster.ts` und `RETRY_PROJECTION_SCOPE`; Anker-Start und Fan-in bleiben unberührt | Choreografie, generische Topics |
 
 Die Dauern 5, 6, 9 und 10 s stammen aus `ANALYSIS_DURATION_MS` in `analysis/apps/{fluids,mechanical,drivetrain,ems}/src/service/*Service.ts`, der CB-Timeout von 5 s aus `analysis/libs/shared/src/circuit-breaker/CircuitBreaker.ts`.
 
@@ -37,7 +37,7 @@ Die Dauern 5, 6, 9 und 10 s stammen aus `ANALYSIS_DURATION_MS` in `analysis/apps
 | Geschäftsleitung WirSchiffenDas | Proof of Concept für Microservices gegen die Haltung der Abteilung Technik |
 | Ingenieur (Konfigurator) | Status je Algorithmus sichtbar, Retry einzeln, übrige Komponenten bleiben responsiv, Monitoring |
 | Software-Architekt Entwicklungsteam | Nachweis, dass Analyse-Komponente ohne Blockade von Manufacturing zerlegbar ist |
-| Betrieb | Container-Deployment, Health, zentrales Logging (offen, siehe §11) |
+| Betrieb | Container-Deployment und Health-Checks (umgesetzt), zentrales Logging und Monitoring (offen, siehe §11) |
 
 ### 1.4 Fachlicher Umfang
 
@@ -93,7 +93,7 @@ Die Kafka-Consumer verwenden getrennte Gruppen (`coordinator`, `fluids`, `drivet
 
 ## 5. Bausteinsicht
 
-Die Bausteinsicht ist als UML-Komponentendiagramm in zwei Ebenen modelliert (Quellen in `docs/diagrams/*.puml`, gerendert mit PlantUML). Ebene 1 zeigt die React-UI und das Subsystem Analysis als Blackbox mit den drei angebotenen Schnittstellen; Ebene 2 öffnet das Subsystem als Whitebox mit den sechs Services, PostgreSQL, Kafka, den angebotenen und benötigten Schnittstellen sowie den sechs durch Circuit Breaker geschützten REST-Kanten. Die Farben-Legende markiert die Änderungen gegenüber dem Stand aus Übung 5 (grün neu, gelb geändert, grau unverändert) und die Herkunft der Technologien (OSS / In-house).
+Die Bausteinsicht ist als UML-Komponentendiagramm in zwei Ebenen modelliert (Quellen in `docs/diagrams/*.puml`, gerendert mit PlantUML). Ebene 1 zeigt die React-UI und das Subsystem Analysis als Blackbox mit den vier angebotenen Schnittstellen; Ebene 2 öffnet das Subsystem als Whitebox mit den sechs Services, PostgreSQL, Kafka, den angebotenen und benötigten Schnittstellen sowie den sechs durch Circuit Breaker geschützten REST-Kanten. Die Farben-Legende markiert die Änderungen gegenüber dem Stand aus Übung 5 (grün neu, gelb geändert, grau unverändert) und die Herkunft der Technologien (OSS / In-house).
 
 ![Bausteinsicht Ebene 1: Blackbox Subsystem Analysis](img/bausteinsicht-ebene1.png)
 
@@ -154,7 +154,7 @@ Die Circuit Breaker liegen an den tatsächlichen automatischen HTTP-Aufrufern:
 
 Der Circuit Breaker wiederholt den fachlichen Lauf nicht. Er begrenzt den REST-Aufruf und übersetzt die Nichterreichbarkeit in einen technischen Clusterstatus. Der explizite Retry bleibt davon getrennt.
 
-Für die Ausfallsimulation besitzt jeder Algorithmus-Service einen `/simulation`-Controller. Der Coordinator reicht die UI-Aufrufe über `SimulationClient` weiter. Ist ein Service als `down` markiert, verweigert sein Controller den Start; beim Retry prüft der Service den Simulationszustand erneut (`analysis/libs/shared/src/simulation/*`).
+Die Ausfallsimulation über die `/simulation`-Controller der Algorithmus-Services und den Simulation-Proxy des Coordinator ist in §8.5 beschrieben.
 
 ![Sequenzdiagramm Ausfall und Retry: Drivetrain simuliert down, Circuit Breaker fluids->drivetrain öffnet, EMS invalidiert, gezielter Retry über analysis-retry](img/sequenz-ausfall-retry.png)
 
@@ -235,7 +235,7 @@ flowchart LR
   R --> R1[Fault Tolerance: Ausfall isoliert]
   R --> R2[Recoverability: Retry je Cluster]
   M --> M1[Analysability: Status ≤ 1 s sichtbar]
-  M --> M2[Modifiability: neuer Cluster ohne Coordinator-Änderung]
+  M --> M2[Modifiability: neuer Cluster = nur ein Eintrag in Cluster.ts und RETRY_PROJECTION_SCOPE; Anker-Start und Fan-in bleiben unberührt]
 ```
 
 ### 10.2 Qualitätsszenarien
@@ -253,14 +253,14 @@ flowchart LR
 |---|---|---|---|---|
 | TS-1 | `libs/shared` enthält Domänen-Code (Cluster, Equipment, DTOs, Messages); ein `package.json`, ein Dockerfile für alle Services | Anti-Pattern Shared Libraries (IV.B.2) | Monorepo-Build: Vertrag wird zur Build-Zeit geteilt, nicht zur Laufzeit; ein Team, ein Release-Zyklus | Kontrakte in Schema Registry (Avro/JSON Schema) auslagern; pro Service eigenes `package.json`; Domänen-Enums nicht mehr teilen |
 | TS-2 | UI ruft Coordinator und Config-Service direkt auf | No API Gateway (IV.B.3) | Zwei Endpunkte für einen PoC; Gateway wäre reiner Proxy | API Gateway / BFF vor Coordinator + Config, wie in der SOLL-Architektur der Firma modelliert |
-| TS-3 | Ursprünglich kein `/health` in den Services; Compose-Healthcheck nur für Kafka/PostgreSQL | No Health Check (IV.B.4) | erledigt (GET /health, Compose healthcheck) | `HealthController` in `analysis/libs/shared/src/health/`, `healthcheck` je Service in `analysis/docker-compose.yml`; Coordinator wartet mit `service_healthy` auf Config, Fluids und Kafka |
-| TS-4 | Logging nur auf stdout je Container, kein zentrales Logging, kein Monitoring | Local Logging, Insufficient Monitoring (IV.B.4) | Außerhalb des PoC-Scopes; Ingenieur fordert Monitoring | Loki/Grafana oder ELK; Correlation-ID = `runId` ist bereits in jeder Nachricht |
-| TS-5 | Coordinator hält Run-Projektion in-memory (`ReplaySubject`), EMS hält Fan-in-Zustand in `Map` | Horizontal Scalability (IV.A.4) | Zustand ist run-lokal und kurzlebig | Projektion in Redis; EMS-Zustand persistieren; Kafka-Partitionierung nach `runId` |
-| TS-6 | Aufrufer publiziert `failed` für einen nicht erreichbaren Zielservice (z. B. Fluids für Drivetrain) | Status-Ownership (eigene Beobachtung) | Run muss einen terminalen Zustand erreichen; Ziel kann selbst nichts publizieren | Eigener Status `unreachable` statt `failed`, um technische von fachlicher Störung zu trennen |
-| TS-7 | Algorithmen lesen die Konfiguration nicht; Ergebnis immer `ok` | ADR-004 | Simulation der Abläufe, nicht der Fachlogik | Ein Cluster liest Config und liefert `failed` für eine definierte Equipment-Kombination |
-| TS-8 | Keine API-Versionierung, keine CI/CD-Pipeline im Repository | No API Versioning, No CI/CD (IV.B.3) | PoC, ein Konsument | `/v1/`-Prefix; GitLab-CI mit Build/Test/Push je Service |
-| TS-9 | `TypeORM synchronize: true` | — | PoC | Migrations |
+| TS-3 | Logging nur auf stdout je Container, kein zentrales Logging, kein Monitoring | Local Logging, Insufficient Monitoring (IV.B.4) | Außerhalb des PoC-Scopes; Ingenieur fordert Monitoring | Loki/Grafana oder ELK; Correlation-ID = `runId` ist bereits in jeder Nachricht |
+| TS-4 | Coordinator hält Run-Projektion in-memory (`ReplaySubject`), EMS hält Fan-in-Zustand in `Map` | Horizontal Scalability (IV.A.4) | Zustand ist run-lokal und kurzlebig | Projektion in Redis; EMS-Zustand persistieren; Kafka-Partitionierung nach `runId` |
+| TS-5 | Aufrufer publiziert `failed` für einen nicht erreichbaren Zielservice (z. B. Fluids für Drivetrain) | Status-Ownership (eigene Beobachtung) | Run muss einen terminalen Zustand erreichen; Ziel kann selbst nichts publizieren | Eigener Status `unreachable` statt `failed`, um technische von fachlicher Störung zu trennen |
+| TS-6 | Algorithmen lesen die Konfiguration nicht; Ergebnis immer `ok` | ADR-004 | Simulation der Abläufe, nicht der Fachlogik | Ein Cluster liest Config und liefert `failed` für eine definierte Equipment-Kombination |
+| TS-7 | Keine API-Versionierung, keine CI/CD-Pipeline im Repository | No API Versioning, No CI/CD (IV.B.3) | PoC, ein Konsument | `/v1/`-Prefix; GitLab-CI mit Build/Test/Push je Service |
+| TS-8 | `TypeORM synchronize: true` | — | PoC | Migrations |
 | R-1 | Kafka at-least-once: doppelte Status-Nachrichten möglich | — | EMS idempotent über `version`, Coordinator über `overallEmitted` | Message-Key = `runId`, Deduplikation im Consumer |
+| R-2 | Kafka als Single Point of Failure | ohne Kafka starten die Services nicht (`depends_on: service_healthy`); fällt Kafka im Betrieb aus, schlagen `emit`-Aufrufe fehl, Status und Resultate gehen verloren, der Run erreicht keinen terminalen Zustand | — | bewusste PoC-Grenze | Kafka-Cluster mit Replikation; Outbox-Pattern beim Producer; Timeout im Coordinator, der einen hängenden Run als `failed` schließt |
 
 ## 12. Glossar
 
@@ -293,7 +293,7 @@ Die acht Statements stammen aus dem Meeting der Bereichsleitung Technik (Übungs
 
 ## Anhang B: KI-Vision (Übung 4e)
 
-Die SOLL-Bausteinsicht enthält die Komponenten `KI-Assistant` und `MCP-Server` (Abbildung unten). Der `MCP-Server` stellt die REST-Endpunkte der Fachservices als MCP-Tools bereit, sodass ein LLM-Agent auf eine Anfrage in natürlicher Sprache den Order-Fulfillment-Prozess anstößt oder eine Analyse startet und einzelne Cluster wiederholt (`POST /analysis/start`, `POST /analysis/:runId/retry/:cluster`). Das LLM erklärt dem Ingenieur ein `failed`-Resultat, indem es das `analysis-result`-Ereignis zusammen mit der gespeicherten Konfiguration liest und eine Handlungsempfehlung formuliert, etwa welche Equipment-Kombination die Prüfung verletzt hat. Der Kafka-Stream `analysis-status` eignet sich für eine Anomalie-Erkennung: Ein Modell erkennt, welche Cluster überdurchschnittlich oft `failed` melden oder länger laufen als üblich, und meldet dies an das Monitoring. Die KI liefert Vorschläge; die Freigabe einer Motorkonfiguration bleibt beim Ingenieur, weil im Schiffbau Haftungs- und Sicherheitsfragen eine nachvollziehbare menschliche Entscheidung verlangen. Deshalb ist KI-Support nicht „unbedenklich“ (Statement 2), sondern braucht Governance für Daten, Protokollierung der Tool-Aufrufe und Freigaberegeln.
+Die SOLL-Bausteinsicht enthält die Komponenten `KI-Assistant` und `MCP-Server` (Abbildung unten). Der `MCP-Server` stellt die REST-Endpunkte der Fachservices als MCP-Tools bereit, sodass ein LLM-Agent auf eine Anfrage in natürlicher Sprache den Order-Fulfillment-Prozess anstößt oder eine Analyse startet und einzelne Cluster wiederholt (`POST /analysis/start`, `POST /analysis/:runId/retry/:cluster`). Das LLM erklärt dem Ingenieur ein `failed`-Resultat (in einer Ausbaustufe mit konfigurationsabhängigen Ergebnissen, siehe TS-6), indem es das `analysis-result`-Ereignis zusammen mit der gespeicherten Konfiguration liest und eine Handlungsempfehlung formuliert, etwa welche Equipment-Kombination die Prüfung verletzt hat. Der Kafka-Stream `analysis-status` eignet sich für eine Anomalie-Erkennung: Ein Modell erkennt, welche Cluster überdurchschnittlich oft `failed` melden oder länger laufen als üblich, und meldet dies an das Monitoring. Die KI liefert Vorschläge; die Freigabe einer Motorkonfiguration bleibt beim Ingenieur, weil im Schiffbau Haftungs- und Sicherheitsfragen eine nachvollziehbare menschliche Entscheidung verlangen. Deshalb ist KI-Support nicht „unbedenklich“ (Statement 2), sondern braucht Governance für Daten, Protokollierung der Tool-Aufrufe und Freigaberegeln.
 
 ![SOLL-Bausteinsicht WirSchiffenDas (Übung 4b) mit KI-Assistant und MCP-Server](img/WirSchiffenDas_BausteinSicht.png)
 
@@ -307,7 +307,7 @@ Die Tabelle bewertet alle sechs Architectural Smells (IV.A) und fünfzehn Anti-P
 | 1 | Hard-Coded Endpoints | Vorhanden. GP-API spricht interne Komponenten über fest codierte IP-Adressen an (z.B. 100.2.33.255/products). Eine Service Registry wurde explizit als „nicht notwendig" abgelehnt. Keine Lösung im IST. | **ja** – analysis/docker-compose.yml (environment: DRIVETRAIN_URL=http://drivetrain:3003 …), analysis/apps/*/src/environment.ts |
 | 2 | Shared Persistence | Vorhanden. Eine zentrale Datenbank auf Layer „Data Management" wird von allen fachlichen Komponenten genutzt. Manufacturing-Team möchte konstruktionsspezifische Daten näher an sich halten — Wunsch geäußert, nicht umgesetzt. | **ja** – analysis/apps/config/src/ConfigModule.ts (einzige TypeORM-Anbindung an configdb) |
 | 3 | Independent Deployment | Nicht erfüllt. Die gesamte Application Logic läuft in einer einzigen VM-Instanz, intern aus Java-Packages bestehend. Aussage „interne Komponenten werden unabhängig mit-deployed" ist technisch nicht haltbar. | **ja** – analysis/docker-compose.yml (ein build-Block je Service, restart: on-failure); Einschränkung gemeinsames Image, siehe TS-1 |
-| 4 | Horizontal Scalability | Nicht erfüllt. Nur die gesamte VM lässt sich replizieren. Individuelle Skalierung von Shipping (saisonale Last im Sommer) und Analyse-Komponente wurde explizit mit „technisch nicht möglich" abgelehnt. | **nein** – analysis/apps/coordinator/src/service/AnalysisService.ts (In-Memory-Projektion), siehe TS-5 |
+| 4 | Horizontal Scalability | Nicht erfüllt. Nur die gesamte VM lässt sich replizieren. Individuelle Skalierung von Shipping (saisonale Last im Sommer) und Analyse-Komponente wurde explizit mit „technisch nicht möglich" abgelehnt. | **nein** – analysis/apps/coordinator/src/service/AnalysisService.ts (In-Memory-Projektion), siehe TS-4 |
 | 5 | Isolation of failures | Vorhanden. Analyse-Komponente blockiert wegen enger interner Kopplung die komplette Manufacturing-Komponente, sobald sie langsam reagiert. Kein Circuit Breaker, kein Bulkhead. | **ja** – analysis/libs/shared/src/circuit-breaker/CircuitBreaker.ts; Einsatz in analysis/apps/*/src/client/*.ts und ClusterGateway.ts |
 | 6 | Decentralization | Vorhanden. GP-API agiert als zentraler Hub: aggregiert UIs serverseitig (UI-Frame), ruft alle internen Komponenten auf, bedient alle Channels gleichzeitig. Zusätzlich zentrale DB → doppelte Zentralisierung (API + Daten). | **ja** – analysis/apps/coordinator/src/gateway/ClusterGateway.ts (startFluids startet nur den Anker), ADR-001 |
 | 7 | Wrong Cut | Vorhanden. Der zentrale „Microservice" kapselt explizit den business layer — laut Dokument „technischer Schnitt". Die Architektur folgt der dreischichtigen Aufteilung Presentation/Application/Data Management. | **ja** – analysis/libs/shared/src/enums/Cluster.ts (Schnitt nach Equipment-Gruppen Fluids, Drivetrain, Mechanical, EMS) |
@@ -318,11 +318,11 @@ Die Tabelle bewertet alle sechs Architectural Smells (IV.A) und fünfzehn Anti-P
 | 12 | Too many standards | Vorhanden. Kommunikation läuft parallel über REST, XML-RPC und MQ-basierte Endpunkte — drei Protokollwelten für dieselbe Aufgabe. | **ja** – analysis/libs/shared/src/kafka/KafkaTopics.ts, analysis/apps/coordinator/src/controller/AnalysisController.ts (REST + SSE), ADR-002 |
 | 13 | Too new technology | Vorhanden. Purchase Merchandise nutzt „experimentelle" Software mit „immer neuester und unterschiedlicher OS-Software" — im produktiven Kundenkontakt. | **ja** – analysis/package.json (NestJS 11, opossum 10), analysis/docker-compose.yml (apache/kafka:3.9.1, postgres:16) |
 | 14 | Manual Anti-Pattern | Vorhanden. Final Deployment ist manuell. Order-Fulfillment läuft manuell über heterogene UIs. Kein Configuration Server, keine Quality-Checks. | **teilweise** – analysis/docker-compose.yml (environment-Blöcke, kein Config-Server); Deployment per docker compose up |
-| 15 | No CI / CD | Vorhanden. Was als „moderne CI/CD-Lösung" bezeichnet wird, ist faktisch nur ein GitHub-Repository für Shared Libraries plus manuelles Deployment ohne Quality-Checks. Das ist Versionskontrolle, keine Pipeline. | **nein** – kein CI-Workflow im Repository, siehe TS-8 |
+| 15 | No CI / CD | Vorhanden. Was als „moderne CI/CD-Lösung" bezeichnet wird, ist faktisch nur ein GitHub-Repository für Shared Libraries plus manuelles Deployment ohne Quality-Checks. Das ist Versionskontrolle, keine Pipeline. | **nein** – kein CI-Workflow im Repository, siehe TS-7 |
 | 16 | No API Gateway | Differenziert: GP-API existiert nominell als Gateway, ist aber als „God-API" realisiert (serverseitige UI-Aggregation, Business-Logik, alle Channels iPhone/Desktop/Web/Data Analyst ohne BFF). Gateway formal vorhanden, faktisch als Anti-Pattern realisiert. | **nein** – analysis-ui/src/api.ts (UI ruft localhost:3000 und localhost:3001 direkt), siehe TS-2 |
 | 17 | Timeouts | Vorhanden. Wörtlich: „Über einen Timeout-Mechanismus hat man nachgedacht, diesen aber generell in der Architektur als nicht relevant angesehen." Folge: hängende Aufrufe an die Analyse-Komponente blockieren Manufacturing. | **ja** – analysis/libs/shared/src/circuit-breaker/CircuitBreaker.ts (timeout: 5_000) |
-| 18 | No API Version | Vorhanden. Wörtlich: „eine Versionierung gibt es nicht." | **nein** – analysis/apps/*/src/controller/*.ts (kein Versionspräfix), siehe TS-8 |
+| 18 | No API Version | Vorhanden. Wörtlich: „eine Versionierung gibt es nicht." | **nein** – analysis/apps/*/src/controller/*.ts (kein Versionspräfix), siehe TS-7 |
 | 19 | No Health Checks | Vorhanden. Health-Checks werden nirgends erwähnt. Die Monitoring-Komponente ist in der Baustein-Sicht nur als „wünschenswert" markiert — existiert also nicht. Zustand der Analyse-Komponente ist nur retrospektiv aus dem Log-File ablesbar. | **ja** – analysis/libs/shared/src/health/HealthController.ts; healthcheck je Service in analysis/docker-compose.yml |
-| 20 | Local Logging | Vorhanden. Wörtlich zur Analyse-Komponente: „Mögliche Gründe für einen Stillstand kann man später in einem lokalen Log-File ablesen." Kein zentrales Logging. | **nein** – stdout je Container (docker compose logs), siehe TS-4 |
-| 21 | Insufficient Monitoring | Vorhanden. Die Monitoring-Komponente ist in der Baustein-Sicht nur als „wünschenswert“ markiert; der Zustand der Analyse-Komponente ist nur retrospektiv aus dem lokalen Log-File ablesbar. Kein Monitoring-Tool im IST. | **nein** – kein Monitoring-Tool im PoC, nur GET /health je Service; siehe TS-4 in docs/arc42.md §11 |
+| 20 | Local Logging | Vorhanden. Wörtlich zur Analyse-Komponente: „Mögliche Gründe für einen Stillstand kann man später in einem lokalen Log-File ablesen." Kein zentrales Logging. | **nein** – stdout je Container (docker compose logs), siehe TS-3 |
+| 21 | Insufficient Monitoring | Vorhanden. Die Monitoring-Komponente ist in der Baustein-Sicht nur als „wünschenswert“ markiert; der Zustand der Analyse-Komponente ist nur retrospektiv aus dem lokalen Log-File ablesbar. Kein Monitoring-Tool im IST. | **nein** – kein Monitoring-Tool im PoC, nur GET /health je Service; siehe TS-3 in docs/arc42.md §11 |
 <!-- csv2md:end -->

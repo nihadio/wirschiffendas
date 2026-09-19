@@ -86,4 +86,4 @@ Falls Docker oder Kafka am Prüfungsrechner nicht startet: das vorab aufgenommen
 
 ## Häufige Nachfrage: „Was passiert, wenn Kafka ausfällt?“
 
-Beim Start warten alle App-Container per `depends_on: condition: service_healthy` auf Kafka. Fällt Kafka im Betrieb aus, schlagen die `emit`-Aufrufe der Services fehl, Status und Resultate gehen verloren und der Run erreicht kein `overall`; dokumentiert als R-1 und TS-5 in `docs/arc42.md` §11.
+Beim Start warten alle App-Container per `depends_on: condition: service_healthy` auf Kafka. Fällt Kafka im Betrieb aus, schlagen die `emit`-Aufrufe der Services fehl, Status und Resultate gehen verloren und der Run erreicht kein `overall`; dokumentiert als R-2 und TS-4 in `docs/arc42.md` §11.
