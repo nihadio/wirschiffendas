@@ -10,31 +10,52 @@ participant "React-UI" as UI
 participant "Coordinator\n:3000" as C
 participant "Fluids\n:3002" as F
 participant "Drivetrain\n:3003" as D
+participant "Mechanical\n:3004" as M
 participant "EMS\n:3005" as E
 queue "Apache Kafka" as K
 
 == Ausfall simulieren ==
+group #f0f0f0 Testharness (Fault Injection, nur PoC – kein Fachprozess)
 UI -> C : POST /simulation/drivetrain/down
 C -> D : POST /simulation/down
 note over D #ffe0e0 : SimulationService.status = down\n/analyze antwortet 503
+end
 
 == Analyselauf (Fluids ist fertig) ==
-F ->> D : POST /analyze { runId }
-D --> F : 503 Service is simulated down
-note over F #ffe0e0 : Circuit Breaker fluids->drivetrain\nfailure → **circuit opened**
-F ->> K : analysis-status { drivetrain, failed }\n(Fallback onUnreachable)
-K -->> E : drivetrain failed
-note over E : invalidate(): version++\nreadyUpstreams.delete(drivetrain)
-E ->> K : analysis-status { ems, failed }
-K -->> C : drivetrain failed, ems failed
+par Drivetrain (down)
+  F ->> D : POST /analyze { runId }  **CB fluids->drivetrain**
+  D --> F : 503 Service is simulated down
+  note over F #ffe0e0 : Circuit Breaker fluids->drivetrain\nfailure → **circuit opened**
+  F ->> K : analysis-status { drivetrain, failed }\n(Fallback onUnreachable)
+  K -->> E : drivetrain failed
+  note over E : invalidate(): version++\nreadyUpstreams.delete(drivetrain)
+  E ->> K : analysis-status { ems, failed }
+  K -->> C : drivetrain failed, ems failed
+  C -->> UI : SSE status failed (drivetrain, ems)
+else Mechanical (up)
+  F ->> M : POST /analyze { runId }  **CB fluids->mechanical**
+  M --> F : 202
+  M ->> K : analysis-status { mechanical, running }
+  activate M
+  note right of M : 6 s
+  M ->> K : analysis-result { mechanical, 4× ok }
+  M ->> K : analysis-status { mechanical, ready }
+  deactivate M
+  M ->> E : POST /analyze { runId, source: mechanical }  **CB mechanical->ems**
+  E --> M : 202
+end
+note over E : readyUpstreams.add(mechanical)\nstartIfReady: drivetrain fehlt → kein Start
+K -->> C : mechanical running, mechanical ready
 note over C : evaluateOverall: kein Cluster mehr running\n→ overall = failed
-C -->> UI : SSE status failed (drivetrain, ems)
+C -->> UI : SSE status ready (mechanical)
 C -->> UI : SSE overall = failed
 UI -> UI : EventSource.close()
 
 == Wiederherstellen und Retry ==
+group #f0f0f0 Testharness (Fault Injection, nur PoC – kein Fachprozess)
 UI -> C : POST /simulation/drivetrain/up
 C -> D : POST /simulation/up
+end
 UI -> C : POST /analysis/:runId/retry/drivetrain
 note over C : resetProjectionForRetry:\nProjektion Drivetrain + EMS zurücksetzen,\noverallEmitted = false, neuer ReplaySubject
 C ->> K : analysis-retry { runId, drivetrain }

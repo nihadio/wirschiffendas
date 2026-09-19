@@ -217,6 +217,10 @@ Die gemeinsame Implementierung basiert auf Opossum. Sie existiert als Decorator 
 
 Jeder EMS-Run besitzt eine monoton erhöhte `version`. Beim Ausfall oder Retry eines Upstreams wird die Version erhöht und der aktuelle Lauf als nicht mehr laufend und nicht abgeschlossen markiert. Der asynchrone EMS-Lauf merkt sich seine Startversion und verwirft nach der Wartezeit sein Ergebnis, falls sich die Version geändert hat. Dadurch kann ein verspäteter Lauf weder Resultat noch `ready` für einen inzwischen ungültigen Zustand publizieren.
 
+### 8.5 Ausfallsimulation
+
+`SimulationService` und `SimulationController` in `analysis/libs/shared/src/simulation/` implementieren eine Fault Injection: `POST /simulation/:cluster/down|up` (über den Coordinator, `analysis/apps/coordinator/src/client/SimulationClient.ts`) setzt den Zustand eines Algorithmus-Services, dessen `/analyze` daraufhin mit 503 antwortet (`SimulationService.assertUp()`). Das ist eine PoC-Variante des Stabilitätsmusters Test Harness nach Nygard (Kapitel 5): Der Aufrufer wird gegen einen absichtlich fehlerhaften Partner geprüft, ohne den Fachprozess zu verändern. In Produktion ist der Auslöser ein realer Ausfall (etwa `docker compose stop drivetrain`); das Verhalten der Circuit Breaker in `analysis/apps/*/src/client/*.ts` ist in beiden Fällen identisch.
+
 ## 9. Architekturentscheidungen
 
 ### ADR-001: Choreografie statt zentraler Orchestrierung
