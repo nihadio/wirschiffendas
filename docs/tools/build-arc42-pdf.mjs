@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Builds docs/arc42.pdf from docs/arc42.md with md-to-pdf.
 // - replaces the Mermaid Qualitätsbaum with the rendered PNG (docs/img/qualitaetsbaum.png)
-// - wraps Anhang C in a landscape page block
 // - uses the locally installed Chrome (docs/tools/puppeteer.json) instead of downloading Chromium
 import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -17,10 +16,6 @@ let md = readFileSync(src, "utf8");
 
 md = md.replace(/```mermaid[\s\S]*?```/, "![Qualitätsbaum](img/qualitaetsbaum.png)");
 
-const anhangC = md.indexOf("## Anhang C");
-if (anhangC >= 0) {
-  md = md.slice(0, anhangC) + '<div class="landscape">\n\n' + md.slice(anhangC) + "\n\n</div>\n";
-}
 
 writeFileSync(tmp, md);
 try {

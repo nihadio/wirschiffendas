@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Renders "docs/Anti patterns.csv" as a Markdown table (drops the empty first column).
+// Renders "docs/Anti patterns.csv" as a four-column Markdown table for arc42 Anhang C.
 //
 //   node docs/tools/csv2md.mjs                 -> prints the table to stdout
 //   node docs/tools/csv2md.mjs --inject        -> replaces the table between the markers
@@ -56,11 +56,15 @@ const rows = parseCsv(readFileSync(csvPath, "utf8"))
   .filter((r) => r.some((c) => c.trim() !== ""))
   .map((r) => r.slice(1)); // drop empty first column
 
-const [header, ...body] = rows;
+// Rendered columns (arc42 Anhang C): ID, Anti Pattern / Smell, Bewertung IST-Architektur,
+// Im PoC umgesetzt? + Nachweis. The CSV keeps all ten template columns.
+const [, ...body] = rows;
+const header = ["ID", "Anti Pattern / Smell", "Bewertung IST-Architektur", "Im PoC umgesetzt? (Nachweis)"];
+const pick = (r) => [r[0], r[1], r[3], `**${r[9].trim()}** – ${r[10]}`];
 const table = [
-  `| ${header.map(cell).join(" | ")} |`,
+  `| ${header.join(" | ")} |`,
   `|${header.map(() => "---").join("|")}|`,
-  ...body.map((r) => `| ${r.map(cell).join(" | ")} |`),
+  ...body.map((r) => `| ${pick(r).map(cell).join(" | ")} |`),
 ].join("\n");
 
 if (process.argv.includes("--inject")) {

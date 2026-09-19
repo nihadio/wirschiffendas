@@ -1,18 +1,17 @@
-@page { size: A4; margin: 18mm; }
-@page landscape { size: A4 landscape; }
-body { font-family: Helvetica, Arial, sans-serif; font-size: 9.5pt; line-height: 1.3; color: #111; }
-h1 { font-size: 20pt; margin-bottom: 0.4em; }
-h2 { font-size: 13pt; margin-top: 1.1em; border-bottom: 1px solid #999; padding-bottom: 2px; page-break-after: avoid; }
-h3 { font-size: 11.5pt; margin-top: 1em; page-break-after: avoid; }
+@page { size: A4; margin: 13mm 15mm; }
+body { font-family: Helvetica, Arial, sans-serif; font-size: 8.6pt; line-height: 1.25; color: #111; }
+h1 { font-size: 18pt; margin: 0 0 0.3em; }
+h2 { font-size: 12.5pt; margin: 0.9em 0 0.3em; border-bottom: 1px solid #999; padding-bottom: 2px; }
+h3 { font-size: 10.5pt; margin: 0.7em 0 0.25em; }
+p { margin: 0.3em 0 0.5em; }
 p, li { text-align: left; }
-code { font-family: Menlo, Consolas, monospace; font-size: 8.5pt; background: #f3f3f3; padding: 0 2px; }
-pre code { font-size: 8pt; }
-table { border-collapse: collapse; width: 100%; font-size: 8pt; margin: 0.4em 0 0.8em; page-break-inside: auto; }
+ul, ol { margin: 0.3em 0 0.5em; padding-left: 1.4em; }
+code { font-family: Menlo, Consolas, monospace; font-size: 7.6pt; background: #f3f3f3; padding: 0 2px; }
+pre code { font-size: 7.5pt; }
+table { border-collapse: collapse; width: 100%; font-size: 7pt; margin: 0.3em 0 0.5em; }
 td code { word-break: break-all; }
-th, td { border: 1px solid #bbb; padding: 3px 5px; vertical-align: top; }
+th, td { border: 1px solid #bbb; padding: 2px 4px; vertical-align: top; }
 th { background: #eee; }
-tr { page-break-inside: avoid; }
-img { max-width: 100%; max-height: 150mm; display: block; margin: 0.4em auto; page-break-inside: avoid; object-fit: contain; }
-.landscape { page: landscape; }
-.landscape table { font-size: 7pt; }
-.landscape th, .landscape td { padding: 2px 3px; }
+img { max-width: 100%; max-height: 82mm; display: block; margin: 0.3em auto; object-fit: contain; }
+.row { display: flex; gap: 3mm; justify-content: center; align-items: flex-start; margin: 0.3em 0; }
+.row img { max-width: 49%; max-height: 62mm; margin: 0; }
