@@ -12,13 +12,13 @@ style: |
   section pre { font-size: 13px; line-height: 1.25; margin: 0; }
   section.small { font-size: 19px; }
   section.small table { font-size: 15px; }
-  .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-  .cols p { font-size: 13px; margin: 0 0 2px; color: #555; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
   .quote { font-style: italic; color: #444; font-size: 20px; border-left: 4px solid #888; padding-left: 12px; }
   .ok { color: #2e7d32; }
   .warn { color: #b26a00; }
-  .foot { position: absolute; bottom: 22px; left: 56px; font-size: 14px; color: #666; }
+  .foot { position: absolute; bottom: 18px; left: 40px; right: 40px; font-size: 22px; color: #333; line-height: 1.25; }
+  section.diagram { padding: 12px 40px 0; }
+  section.diagram img { display: block; margin: 0 auto; max-width: 100%; }
 ---
 
 # Analyse des Optional Equipments als Microservice-Choreografie
@@ -27,6 +27,8 @@ style: |
 
 Proof of Concept für die Analyse-Komponente der Komponente „Manufacturing Products“
 (Diesel Engine 2000 M96, elf Optional Equipments in vier Algorithmus-Clustern)
+
+**Schwerpunkt-Thema: Apache Kafka (Kapitel 4)**
 
 Umgesetzt: **MS_TA1** Apache Kafka · **MS_TA2** Docker Compose · **MS_TA3** Circuit Breaker (Opossum)
 
@@ -80,53 +82,27 @@ Nihad Jabrayilzade · Hochschule Bonn-Rhein-Sieg · Prüfer: Prof. Dr. Sascha Al
 
 ---
 
-<!-- _class: small -->
+<!-- _class: diagram -->
 
-## Bausteinsicht (UML)
+![h:560](img/bausteinsicht-ebene2.png)
 
-![bg right:76% fit](img/bausteinsicht-ebene2.png)
-
-- 6 Services, Kafka, PostgreSQL
-- Lollipop / Socket = Schnittstellen
-- **CB** = 6 Circuit-Breaker-Kanten
-- grün neu · gelb geändert · grau unverändert
+<div class="foot">Bausteinsicht (UML): 6 Services, Kafka, PostgreSQL · Lollipop/Socket = Schnittstellen · CB = 6 Circuit-Breaker-Kanten · grün neu / gelb geändert / grau unverändert ggü. Übung 5</div>
 
 ---
 
-<!-- _class: small -->
+<!-- _class: diagram -->
 
-## Laufzeitsicht: Happy Path
+![h:560](img/sequenz-happy-path.png)
 
-![bg right:74% fit](img/sequenz-happy-path.png)
-
-Choreografie, keine Orchestrierung:
-
-- Coordinator startet nur den Anker Fluids
-- Fluids ruft Drivetrain ‖ Mechanical
-- beide melden an EMS (Fan-in)
-- Coordinator = Read Model + SSE, kennt den Ablauf nicht
+<div class="foot">Laufzeitsicht Happy Path, Choreografie statt Orchestrierung: Coordinator startet nur den Anker Fluids · Fluids ruft Drivetrain ‖ Mechanical · beide melden an EMS (Fan-in) · Coordinator = Read Model + SSE</div>
 
 ---
 
-## Verteilungssicht: Docker Compose
+<!-- _class: diagram -->
 
-![bg right:60% fit](img/verteilungssicht.png)
+![h:560](img/verteilungssicht.png)
 
-Acht Container, ein Dockerfile, `depends_on: service_healthy`
-
-```text
-SERVICE      STATUS
-config       Up (healthy)   3001->3001
-configdb     Up (healthy)   5432->5432
-coordinator  Up (healthy)   3000->3000
-drivetrain   Up (healthy)
-ems          Up (healthy)
-fluids       Up (healthy)
-kafka        Up (healthy)   9092->9092
-mechanical   Up (healthy)
-```
-
-`GET /health` je Service, Healthcheck per `node -e fetch(...)`
+<div class="foot">Verteilungssicht Docker Compose – acht Container, ein Dockerfile · depends_on: service_healthy · GET /health je Service · docker compose ps: 8/8 (healthy)</div>
 
 ---
 
@@ -163,80 +139,11 @@ Bewertung aller 21 Zeilen in arc42 Anhang C · 12 von 21 Lösungen im PoC umgese
 
 ## Code-Walkthrough
 
-<div class="cols">
-<div>
+### Live im Editor
 
-`analysis/libs/shared/src/circuit-breaker/CircuitBreaker.ts`
-
-```ts
-const DEFAULT_OPTIONS: OpossumBreaker.Options = {
-  timeout: 5_000,
-  errorThresholdPercentage: 50,
-  resetTimeout: 10_000,
-};
-// …
-  if (fallback) {
-    breaker.fallback(fallback);
-  }
-
-  const logger = new Logger(`CircuitBreaker:${name}`);
-  breaker.on("failure", (error: Error) =>
-    logger.warn(`call failed: ${error.message}`),
-  );
-  breaker.on("open", () => logger.warn("circuit opened"));
-```
-
-</div>
-<div>
-
-`analysis/apps/ems/src/service/EmsService.ts` – `startIfReady` / `run`
-
-```ts
-    if (run.running || run.completed || !this.hasAllUpstreams(run)) {
-      return false;
-    }
-
-    const version = run.version;
-    run.running = true;
-
-    void this.run(runId, run, version).then((completed) => {
-      if (run.version !== version) {
-        return;
-      }
-
-      run.running = false;
-      run.completed = completed;
-    });
-// … run():
-    await new Promise((resolve) => setTimeout(resolve, ANALYSIS_DURATION_MS));
-
-    if (run.version !== version) {
-      return false;
-    }
-```
-
-</div>
-<div>
-
-`analysis/apps/coordinator/src/gateway/ClusterGateway.ts` – `retry`
-
-```ts
-  retry(runId: string, cluster: string) {
-    if (!Object.values(Cluster).includes(cluster as Cluster)) {
-      throw new BadRequestException(`Unknown cluster "${cluster}".`);
-    }
-
-    const retriedCluster = cluster as Cluster;
-
-    this.analysisService.resetProjectionForRetry(runId, retriedCluster);
-    this.kafkaClient.emitRetry({
-      runId,
-      cluster: retriedCluster,
-    });
-```
-
-</div>
-</div>
+- `analysis/libs/shared/src/circuit-breaker/CircuitBreaker.ts` — Decorator, Fallback, „circuit opened“
+- `analysis/apps/ems/src/service/EmsService.ts` — `startIfReady`, `version++`
+- `analysis/apps/coordinator/src/gateway/ClusterGateway.ts` — `retry`: Projektion zurücksetzen, `analysis-retry` publizieren
 
 ---
 

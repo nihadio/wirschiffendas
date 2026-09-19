@@ -82,7 +82,7 @@ cd analysis && docker compose down -v
 
 ## Fallback
 
-Falls Docker oder Kafka am Prüfungsrechner nicht startet: das vorab aufgenommene Bildschirmvideo (90 s, Schritte 2–4) liegt auf dem Desktop und wird ohne Ton abgespielt, während der Sprechtext aus den Abschnitten 2–4 verwendet wird. Die Ausgabe von `docker compose ps` ist zusätzlich auf Folie 6 abgedruckt.
+Falls Docker oder Kafka am Prüfungsrechner nicht startet: das vorab aufgenommene Bildschirmvideo (90 s, Schritte 2–4) liegt auf dem Desktop und wird ohne Ton abgespielt, während der Sprechtext aus den Abschnitten 2–4 verwendet wird. Folie 6 nennt den erwarteten Zustand `docker compose ps: 8/8 (healthy)`.
 
 ## Häufige Nachfrage: „Was passiert, wenn Kafka ausfällt?“
 
