@@ -1,0 +1,80 @@
+@startuml sequence-happy-path
+' arc42 §6.1 Regular analysis run – every message has a counterpart in the code (see docs/diagrams/README.md)
+title Runtime View – Regular Analysis Run (Happy Path)
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam defaultFontSize 14
+<style>
+participant {
+  Padding 8
+}
+</style>
+autonumber
+
+actor "Engineer" as Ing
+participant "React UI" as UI
+participant "Coordinator\n:3000" as C
+participant "Config Service\n:3001" as CF
+participant "Fluids\n:3002" as F
+participant "Drivetrain\n:3003" as D
+participant "Mechanical\n:3004" as M
+participant "EMS\n:3005" as E
+queue "Apache Kafka" as K
+
+Ing -> UI : Analyze (select config)
+UI -> C : POST /analysis/start { configId }
+C -> CF : GET /configs/:id  **CB coordinator->config**
+CF --> C : 200 OptionalEquipmentConfig
+C -> C : runId = randomUUID(); createRun(runId)
+C --> UI : 201 { runId }
+C ->> F : POST /analyze { runId }  **CB coordinator->fluids** (async)
+F --> C : 202 { accepted, runId }
+UI -> C : GET /analysis/:runId/stream (SSE)
+
+F ->> K : analysis-status { fluids, running }
+activate F
+note right of F : 5 s analysis (ANALYSIS_DURATION_MS)
+F ->> K : analysis-result { fluids, 3× ok }
+F ->> K : analysis-status { fluids, ready }
+deactivate F
+
+par Drivetrain ‖ Mechanical
+  F ->> D : POST /analyze { runId }  **CB fluids->drivetrain**
+  D --> F : 202
+  D ->> K : analysis-status { drivetrain, running }
+  activate D
+  note right of D : 9 s
+  D ->> K : analysis-result { drivetrain, 2× ok }
+  D ->> K : analysis-status { drivetrain, ready }
+  deactivate D
+  D ->> E : POST /analyze { runId, source: drivetrain }  **CB drivetrain->ems**
+  E --> D : 202
+else
+  F ->> M : POST /analyze { runId }  **CB fluids->mechanical**
+  M --> F : 202
+  M ->> K : analysis-status { mechanical, running }
+  activate M
+  note right of M : 6 s
+  M ->> K : analysis-result { mechanical, 4× ok }
+  M ->> K : analysis-status { mechanical, ready }
+  deactivate M
+  M ->> E : POST /analyze { runId, source: mechanical }  **CB mechanical->ems**
+  E --> M : 202
+end
+
+K -->> E : analysis-status ready (drivetrain, mechanical)\nreadyUpstreams.add
+note over E : Fan-in complete: readyUpstreams = { drivetrain, mechanical }\nstartIfReady → run(version)
+E ->> K : analysis-status { ems, running }
+activate E
+note right of E : 10 s
+E ->> K : analysis-result { ems, 2× ok }
+E ->> K : analysis-status { ems, ready }
+deactivate E
+
+K -->> C : analysis-status / analysis-result\n(consumer group coordinator)
+C -> C : applyStatusMessage / applyResultMessage\nevaluateOverall: all 4 clusters ready
+C -->> UI : SSE status, result (per cluster)
+C -->> UI : SSE overall = ok
+UI -> UI : EventSource.close()
+@enduml

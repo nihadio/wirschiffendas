@@ -1,0 +1,64 @@
+@startuml building-block-view-level2
+' arc42 §5.1 Building block view, level 2 (whitebox subsystem Analysis)
+' Interfaces according to arc42 §3.2; CB edges exactly the six from arc42 §6.4
+title Building Block View Level 2 – Whitebox Subsystem Analysis (UML Component Diagram)
+skinparam componentStyle uml2
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam linetype polyline
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam ArrowFontSize 11
+
+component "React UI\n<<Frontend>>\nVite, localhost:5173" as UI #eeeeee
+
+package "Subsystem Analysis" {
+  component "Coordinator\n<<Microservice>> :3000\nEntry Point · Read Model\nOverall · Retry Publisher · SSE" as COORD #fff2cc
+  component "Config Service\n<<Microservice>> :3001\nCRUD engine configurations" as CONFIG #eeeeee
+  database "PostgreSQL 16\n<<OSS>> :5432" as DB #eeeeee
+  component "Fluids\n<<Algorithm Microservice>> :3002\nAnchor · Oil, Fuel, Cooling" as FLU #eeeeee
+  component "Drivetrain\n<<Algorithm Microservice>> :3003\nPower Transmission, Gearbox" as DRV #eeeeee
+  component "Mechanical\n<<Algorithm Microservice>> :3004\nStarting, PTO, Mounting, Exhaust" as MEC #eeeeee
+  component "EMS\n<<Algorithm Microservice>> :3005\nFan-in Drivetrain + Mechanical\n**version++ invalidation**" as EMS #fff2cc
+  queue "Apache Kafka 3.9.1 <<OSS>>\nkafka:19092 · consumer group per service\nTopics: analysis-status, analysis-result,\n**analysis-retry**" as KAFKA #d9ead3
+}
+
+' --- UI -> subsystem ---
+UI -(0- COORD : IAnalysis (start, retry)
+UI -(0- COORD : IStream (SSE)
+UI -(0- COORD : ISimulationProxy
+UI -(0- CONFIG : IConfig (CRUD)
+
+' --- REST transitions of the choreography, all with circuit breaker (arc42 §6.4) ---
+COORD -(0- CONFIG : IConfig  **CB**
+COORD -(0- FLU : IAnalyze  **CB**
+FLU -(0- DRV : IAnalyze  **CB**
+FLU -(0- MEC : IAnalyze  **CB**
+DRV -(0- EMS : IAnalyze\nsource=drivetrain  **CB**
+MEC -(0- EMS : IAnalyze\nsource=mechanical  **CB**
+
+' --- Simulation controller in every algorithm service ---
+COORD -(0- FLU : ISimulation
+COORD -(0- DRV : ISimulation
+COORD -(0- MEC : ISimulation
+COORD -(0- EMS : ISimulation
+
+' --- Kafka topics ---
+COORD -(0- KAFKA : IStatusEvents, IResultEvents\nIRetryCommands (publish)
+FLU -(0- KAFKA : IStatusEvents, IResultEvents\nIRetryCommands
+DRV -(0- KAFKA : IStatusEvents, IResultEvents\nIRetryCommands
+MEC -(0- KAFKA : IStatusEvents, IResultEvents\nIRetryCommands
+EMS -(0- KAFKA : IStatusEvents (+ consume)\nIResultEvents, IRetryCommands
+
+' --- Persistence ---
+CONFIG -(0- DB : IConfigDB (TypeORM)
+
+legend bottom
+  **Colors:** yellow = process-local runtime state (read model, fan-in) · green = message channel · grey = stateless or external persistence
+  **Origin of technologies**
+  | OSS | Apache Kafka, PostgreSQL, Opossum (Circuit Breaker), NestJS |
+  | In-house | Coordinator, Config Service, Fluids, Drivetrain, Mechanical, EMS, React UI |
+  **Notation:** —( )— required (socket) / provided (lollipop) interface · **CB** = circuit breaker at the caller · Kafka interfaces = topics
+  **Interfaces** = contracts in @shared/contracts (see §5.1, §8.6)
+endlegend
+@enduml

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/coordinator/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/coordinator/tsconfig.app.json",
+    "plugins": [
+      {
+        "name": "@nestjs/swagger",
+        "options": {
+          "classValidatorShim": true,
+          "introspectComments": true,
+          "dtoFileNameSuffix": [
+            "Dto.ts",
+            "Request.ts",
+            "Message.ts",
+            "Config.ts",
+            "Result.ts"
+          ],
+          "controllerFileNameSuffix": [
+            "Controller.ts"
+          ]
+        }
+      }
+    ]
+  },
+  "monorepo": true,
+  "root": "apps/coordinator",
+  "projects": {
+    "config": {
+      "type": "application",
+      "root": "apps/config",
+      "entryFile": "main",
+      "sourceRoot": "apps/config/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/config/tsconfig.app.json"
+      }
+    },
+    "coordinator": {
+      "type": "application",
+      "root": "apps/coordinator",
+      "entryFile": "main",
+      "sourceRoot": "apps/coordinator/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/coordinator/tsconfig.app.json"
+      }
+    },
+    "drivetrain": {
+      "type": "application",
+      "root": "apps/drivetrain",
+      "entryFile": "main",
+      "sourceRoot": "apps/drivetrain/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/drivetrain/tsconfig.app.json"
+      }
+    },
+    "ems": {
+      "type": "application",
+      "root": "apps/ems",
+      "entryFile": "main",
+      "sourceRoot": "apps/ems/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/ems/tsconfig.app.json"
+      }
+    },
+    "fluids": {
+      "type": "application",
+      "root": "apps/fluids",
+      "entryFile": "main",
+      "sourceRoot": "apps/fluids/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/fluids/tsconfig.app.json"
+      }
+    },
+    "mechanical": {
+      "type": "application",
+      "root": "apps/mechanical",
+      "entryFile": "main",
+      "sourceRoot": "apps/mechanical/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/mechanical/tsconfig.app.json"
+      }
+    },
+    "shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    }
+  }
+}

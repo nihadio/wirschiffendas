@@ -1,0 +1,37 @@
+@startuml context-view
+' arc42 §3 Context view – subsystem Analysis as a blackbox, neighbours as named in arc42 §3.1/§3.2
+title Context View – Subsystem Analysis (Blackbox)
+skinparam componentStyle uml2
+skinparam defaultFontName Helvetica
+skinparam shadowing false
+skinparam linetype polyline
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam ArrowFontSize 11
+
+actor "Engineer" as ENG
+
+component "React UI\n<<Frontend>>\nVite, localhost:5173" as UI #eeeeee
+
+component "Subsystem Analysis\n<<Bounded Context Analysis>>\nCoordinator :3000 · Config Service :3001" as ANALYSIS #fff2cc
+
+component "Manufacturing\n<<Bounded Context>>" as MANU #eeeeee
+component "SAP ERP\n<<External System>>" as ERP #eeeeee
+component "CRM\n<<External System>>" as CRM #eeeeee
+
+ENG --> UI : manage configurations,\nstart analysis, retry,\nsimulate failure
+
+UI -(0- ANALYSIS : IConfig (GET/POST /configs, GET/PUT /configs/:id)
+UI -(0- ANALYSIS : IAnalysis (POST /analysis/start,\nPOST /analysis/:runId/retry/:cluster)
+UI -(0- ANALYSIS : ISimulationProxy (GET /simulation/statuses,\nPOST /simulation/:cluster/up|down)
+UI -(0- ANALYSIS : IStream (SSE GET /analysis/:runId/stream:\nstatus, result, overall)
+
+ANALYSIS .. MANU : Partnership
+ANALYSIS .. ERP : Anti-Corruption Layer
+ANALYSIS .. CRM : Anti-Corruption Layer
+
+legend bottom
+  **Notation:** —( )— required (socket) / provided (lollipop) interface · solid = technical context (arc42 §3.2) · dotted = domain relationship (arc42 §3.1)
+  **Colors:** yellow = system under consideration · grey = neighbour
+endlegend
+@enduml

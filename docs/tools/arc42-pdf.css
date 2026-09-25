@@ -1,0 +1,27 @@
+@page { size: A4; margin: 20mm; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; line-height: 1.3; color: #111; }
+h1 { font-size: 17pt; margin: 0 0 0.3em; }
+h2 { font-size: 13pt; margin: 0.7em 0 0.25em; border-bottom: 1px solid #999; padding-bottom: 2px; }
+h3 { font-size: 11pt; margin: 0.6em 0 0.2em; }
+p { margin: 0.3em 0 0.5em; }
+p, li { text-align: left; }
+ul, ol { margin: 0.3em 0 0.5em; padding-left: 1.4em; }
+code { font-family: Menlo, Consolas, monospace; font-size: 8.5pt; background: #f3f3f3; padding: 0 2px; }
+pre code { font-size: 8.5pt; }
+table { border-collapse: collapse; width: 100%; font-size: 8.5pt; margin: 0.3em 0 0.5em; }
+th, td { border: 1px solid #bbb; padding: 2px 4px; vertical-align: top; }
+th { background: #eee; }
+td code { word-break: normal; overflow-wrap: anywhere; }
+/* Narrow ID columns (QS-1 …) must not break at the hyphen. */
+th:first-child, td:first-child { min-width: 13mm; }
+
+/* Figures flow in the text: full column width, height capped, aspect ratio kept. */
+img { display: block; width: 100%; max-width: 100%; max-height: 150mm; object-fit: contain; margin: 0.4em auto; }
+
+/* Figures are never split across pages; no forced page breaks anywhere. */
+img, p:has(> img) { page-break-inside: avoid; break-inside: avoid; }
+
+/* Long tables may flow across pages, but a single row stays together. */
+table { page-break-inside: auto; break-inside: auto; }
+tr, th, td { page-break-inside: avoid; break-inside: avoid; }
+thead { display: table-header-group; }

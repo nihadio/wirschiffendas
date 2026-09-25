@@ -1,0 +1,237 @@
+{
+  "components": {
+    "schemas": {
+      "Config": {
+        "properties": {
+          "cylinderVariant": {
+            "enum": [
+              "10V",
+              "12V",
+              "16V"
+            ],
+            "type": "string"
+          },
+          "engineModel": {
+            "type": "string"
+          },
+          "equipment": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "gearboxType": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "engineModel",
+          "cylinderVariant",
+          "gearboxType",
+          "equipment"
+        ],
+        "type": "object"
+      },
+      "CreateConfigDto": {
+        "properties": {
+          "cylinderVariant": {
+            "enum": [
+              "10V",
+              "12V",
+              "16V"
+            ],
+            "type": "string"
+          },
+          "engineModel": {
+            "type": "string"
+          },
+          "equipment": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "gearboxType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "engineModel",
+          "cylinderVariant",
+          "gearboxType",
+          "equipment"
+        ],
+        "type": "object"
+      },
+      "UpdateConfigDto": {
+        "properties": {
+          "cylinderVariant": {
+            "enum": [
+              "10V",
+              "12V",
+              "16V"
+            ],
+            "type": "string"
+          },
+          "engineModel": {
+            "type": "string"
+          },
+          "equipment": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "gearboxType": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "contact": {},
+    "description": "",
+    "title": "Config-Service",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/configs": {
+      "get": {
+        "operationId": "ConfigController_getConfigs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Config"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "Config"
+        ]
+      },
+      "post": {
+        "operationId": "ConfigController_createConfig",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "Config"
+        ]
+      }
+    },
+    "/configs/{id}": {
+      "get": {
+        "operationId": "ConfigController_getConfig",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "Config"
+        ]
+      },
+      "put": {
+        "operationId": "ConfigController_updateConfig",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Config"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "Config"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "servers": [],
+  "tags": []
+}

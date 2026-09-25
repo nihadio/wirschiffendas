@@ -1,0 +1,7 @@
+course-materials/
+plantuml.jar
+.DS_Store
+.$*.bkp
+.vscode/
+docs/arc42.pdf
+docs/arc42-pdf-build.md

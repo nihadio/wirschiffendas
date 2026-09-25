@@ -1,0 +1,9 @@
+flowchart LR
+  Q[Quality Analysis PoC] --> P[Performance Efficiency]
+  Q --> R[Reliability]
+  Q --> M[Maintainability]
+  P --> P1[Time Behaviour: start < 500 ms]
+  R --> R1[Fault Tolerance: failure isolated]
+  R --> R2[Recoverability: retry per cluster]
+  M --> M1[Analysability: status visible within ≤ 1 s]
+  M --> M2[Modifiability: new cluster = only one entry in Cluster.ts and RETRY_PROJECTION_SCOPE; anchor start and fan-in remain untouched]
